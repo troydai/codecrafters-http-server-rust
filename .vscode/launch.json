@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug HTTP Server",
+            "cargo": {
+                "args": ["build", "--bin=codecrafters-http-server", "--package=codecrafters-http-server"],
+                "filter": {
+                    "name": "codecrafters-http-server",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug Tests",
+            "cargo": {
+                "args": ["test", "--no-run", "--package=codecrafters-http-server"],
+                "filter": {
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
