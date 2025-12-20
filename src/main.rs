@@ -101,16 +101,20 @@ impl Response {
 }
 
 fn read_request(stream: &mut TcpStream) -> Result<Request> {
-    let mut buf = [0; 1024];
+    let mut line: Vec<u8> = Vec::new();
+    loop {
+        let mut buf = [0; 1024];
+        let size = stream.read(&mut buf)?;
 
-    let size = stream.read(&mut buf)?;
-    if let Some(pos) = buf[..size].windows(2).position(|w| w == CRLF) {
-        let fisrt_line = std::str::from_utf8(&buf[..pos])?;
-
-        return Request::from_header(fisrt_line);
+        if let Some(pos) = buf[..size].windows(2).position(|w| w == CRLF) {
+            line.extend(&buf[..pos]);
+            break;
+        } else {
+            line.extend(&buf);
+        }
     }
 
-    bail!("buffer overflow!");
+    Request::from_header(std::str::from_utf8(&line[..])?)
 }
 
 fn write_response(stream: &mut TcpStream, resp: &Response) -> Result<()> {
