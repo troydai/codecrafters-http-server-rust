@@ -33,7 +33,7 @@ fn main() {
 }
 
 fn process_stream(stream: &mut TcpStream) -> Result<()> {
-    let req = request::from_stream(stream)?;
+    let req = request::from_reader(stream)?;
     // println!("Received {:?}", req);
 
     if req.path == "/" {
