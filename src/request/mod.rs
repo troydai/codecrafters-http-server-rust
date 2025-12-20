@@ -1,10 +1,31 @@
 use anyhow::{Result, bail};
+use std::io::Read;
+use std::net::TcpStream;
+
+use crate::consts::CRLF;
 
 #[derive(Debug)]
 pub struct Request {
     _method: String,
     pub path: String,
     pub protocol: String,
+}
+
+pub fn from_stream(stream: &mut TcpStream) -> Result<Request> {
+    let mut line: Vec<u8> = Vec::new();
+    loop {
+        let mut buf = [0; 1024];
+        let size = stream.read(&mut buf)?;
+
+        if let Some(pos) = buf[..size].windows(2).position(|w| w == CRLF) {
+            line.extend(&buf[..pos]);
+            break;
+        } else {
+            line.extend(&buf);
+        }
+    }
+
+    Request::from_header(std::str::from_utf8(&line[..])?)
 }
 
 impl Request {

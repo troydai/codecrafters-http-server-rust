@@ -1,14 +1,13 @@
+mod consts;
 mod request;
+mod response;
 
 #[allow(unused_imports)]
 use anyhow::Result;
-use std::io::Read;
 use std::net::TcpListener;
 use std::{io::Write, net::TcpStream};
 
-use request::Request;
-
-const CRLF: &[u8] = b"\r\n";
+use consts::CRLF;
 
 fn main() {
     // You can use print statements as follows for debugging,
@@ -34,18 +33,18 @@ fn main() {
 }
 
 fn process_stream(stream: &mut TcpStream) -> Result<()> {
-    let req = read_request(stream)?;
+    let req = request::from_stream(stream)?;
     // println!("Received {:?}", req);
 
     if req.path == "/" {
         write_response(
             stream,
-            &Response::new(&req.protocol, String::from("200"), String::from("OK")),
+            &response::Response::new(&req.protocol, String::from("200"), String::from("OK")),
         )?;
     } else {
         write_response(
             stream,
-            &Response::new(
+            &response::Response::new(
                 &req.protocol,
                 String::from("404"),
                 String::from("Not Found"),
@@ -56,41 +55,7 @@ fn process_stream(stream: &mut TcpStream) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug)]
-struct Response {
-    protocol: String,
-    status_code: String,
-    status_phrase: String,
-}
-
-impl Response {
-    pub fn new(protocol: &str, status_code: String, status_phrase: String) -> Self {
-        Self {
-            protocol: String::from(protocol),
-            status_code,
-            status_phrase,
-        }
-    }
-}
-
-fn read_request(stream: &mut TcpStream) -> Result<request::Request> {
-    let mut line: Vec<u8> = Vec::new();
-    loop {
-        let mut buf = [0; 1024];
-        let size = stream.read(&mut buf)?;
-
-        if let Some(pos) = buf[..size].windows(2).position(|w| w == CRLF) {
-            line.extend(&buf[..pos]);
-            break;
-        } else {
-            line.extend(&buf);
-        }
-    }
-
-    Request::from_header(std::str::from_utf8(&line[..])?)
-}
-
-fn write_response(stream: &mut TcpStream, resp: &Response) -> Result<()> {
+fn write_response(stream: &mut TcpStream, resp: &response::Response) -> Result<()> {
     let head = format!(
         "{} {} {}",
         resp.protocol, resp.status_code, resp.status_phrase
