@@ -1,9 +1,12 @@
+mod request;
+
 #[allow(unused_imports)]
 use anyhow::Result;
-use anyhow::bail;
 use std::io::Read;
 use std::net::TcpListener;
 use std::{io::Write, net::TcpStream};
+
+use request::Request;
 
 const CRLF: &[u8] = b"\r\n";
 
@@ -54,40 +57,10 @@ fn process_stream(stream: &mut TcpStream) -> Result<()> {
 }
 
 #[derive(Debug)]
-struct Request {
-    _method: String,
-    path: String,
-    protocol: String,
-}
-
-#[derive(Debug)]
 struct Response {
     protocol: String,
     status_code: String,
     status_phrase: String,
-}
-
-impl Request {
-    pub fn _new() -> Self {
-        Self {
-            _method: String::from("GET"),
-            path: String::from("/"),
-            protocol: String::from("/"),
-        }
-    }
-
-    pub fn from_header(line: &str) -> Result<Self> {
-        let parts: Vec<&str> = line.split(' ').collect();
-        if parts.len() < 3 {
-            bail!("request's first line is malformed. fewer than 3 parts")
-        }
-
-        Ok(Self {
-            _method: String::from(parts[0]).to_uppercase(),
-            path: String::from(parts[1]),
-            protocol: String::from(parts[2]),
-        })
-    }
 }
 
 impl Response {
@@ -100,7 +73,7 @@ impl Response {
     }
 }
 
-fn read_request(stream: &mut TcpStream) -> Result<Request> {
+fn read_request(stream: &mut TcpStream) -> Result<request::Request> {
     let mut line: Vec<u8> = Vec::new();
     loop {
         let mut buf = [0; 1024];
