@@ -18,11 +18,11 @@ fn main() {
         match stream {
             Ok(mut stream) => {
                 if let Err(e) = process_stream(&mut stream) {
-                    println!("failed connection: {}", e)
+                    println!("failed connection: {e}");
                 }
             }
             Err(e) => {
-                println!("error: {}", e);
+                println!("error: {e}");
             }
         }
 
@@ -37,12 +37,12 @@ fn process_stream(stream: &mut TcpStream) -> Result<()> {
     if req.path == "/" {
         write_response(
             stream,
-            Response::new(&req.protocol, String::from("200"), String::from("OK")),
+            &Response::new(&req.protocol, String::from("200"), String::from("OK")),
         )?;
     } else {
         write_response(
             stream,
-            Response::new(
+            &Response::new(
                 &req.protocol,
                 String::from("404"),
                 String::from("Not Found"),
@@ -64,7 +64,7 @@ struct Request {
 struct Response {
     protocol: String,
     status_code: String,
-    status_phase: String,
+    status_phrase: String,
 }
 
 impl Request {
@@ -77,7 +77,7 @@ impl Request {
     }
 
     pub fn from_header(line: &str) -> Result<Self> {
-        let parts: Vec<&str> = line.split(" ").collect();
+        let parts: Vec<&str> = line.split(' ').collect();
         if parts.len() < 3 {
             bail!("request's first line is malformed. fewer than 3 parts")
         }
@@ -91,11 +91,11 @@ impl Request {
 }
 
 impl Response {
-    pub fn new(protocol: &String, status_code: String, status_phrase: String) -> Self {
+    pub fn new(protocol: &str, status_code: String, status_phrase: String) -> Self {
         Self {
-            protocol: protocol.clone(),
-            status_code: status_code,
-            status_phase: status_phrase,
+            protocol: String::from(protocol),
+            status_code,
+            status_phrase,
         }
     }
 }
@@ -107,21 +107,21 @@ fn read_request(stream: &mut TcpStream) -> Result<Request> {
     if let Some(pos) = buf[..size].windows(2).position(|w| w == CRLF) {
         let fisrt_line = std::str::from_utf8(&buf[..pos])?;
 
-        return Ok(Request::from_header(fisrt_line)?);
-    } else {
-        bail!("buffer overflow!");
+        return Request::from_header(fisrt_line);
     }
+
+    bail!("buffer overflow!");
 }
 
-fn write_response(stream: &mut TcpStream, resp: Response) -> Result<()> {
+fn write_response(stream: &mut TcpStream, resp: &Response) -> Result<()> {
     let head = format!(
         "{} {} {}",
-        resp.protocol, resp.status_code, resp.status_phase
+        resp.protocol, resp.status_code, resp.status_phrase
     );
 
     stream.write_all(head.as_bytes())?;
-    stream.write(CRLF)?;
-    stream.write(CRLF)?;
+    stream.write_all(CRLF)?;
+    stream.write_all(CRLF)?;
     stream.flush()?;
     Ok(())
 }

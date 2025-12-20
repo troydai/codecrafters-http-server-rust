@@ -1,0 +1,5 @@
+# Clippy configuration
+# See: https://doc.rust-lang.org/clippy/configuration.html
+
+# MSRV (Minimum Supported Rust Version) - matches Cargo.toml
+msrv = "1.91"
