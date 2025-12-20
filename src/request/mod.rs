@@ -10,7 +10,7 @@ use crate::consts::CRLF;
 pub struct Request {
     _method: String,
     _headers: Vec<Vec<u8>>,
-    pub path: String,
+    path: String,
     pub protocol: String,
 }
 
@@ -55,15 +55,6 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
 }
 
 impl Request {
-    pub fn _new() -> Self {
-        Self {
-            _method: String::from("GET"),
-            _headers: Vec::new(),
-            path: String::from("/"),
-            protocol: String::from("/"),
-        }
-    }
-
     pub fn from_header(headers: Vec<Vec<u8>>) -> Result<Self> {
         if headers.is_empty() {
             bail!("invalid headers number")
@@ -83,5 +74,9 @@ impl Request {
             path: String::from(parts[1]),
             protocol: String::from(parts[2]),
         })
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
     }
 }

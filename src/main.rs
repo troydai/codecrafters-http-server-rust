@@ -1,13 +1,12 @@
 mod consts;
 mod request;
 mod response;
+mod router;
 
 #[allow(unused_imports)]
 use anyhow::Result;
 use std::net::TcpListener;
-use std::{io::Write, net::TcpStream};
-
-use consts::CRLF;
+use std::net::TcpStream;
 
 fn main() {
     // You can use print statements as follows for debugging,
@@ -34,36 +33,12 @@ fn main() {
 
 fn process_stream(stream: &mut TcpStream) -> Result<()> {
     let req = request::from_reader(stream)?;
-    // println!("Received {:?}", req);
 
-    if req.path == "/" {
-        write_response(
-            stream,
-            &response::Response::new(&req.protocol, String::from("200"), String::from("OK")),
-        )?;
+    if let Ok(resp) = router::handle(&req) {
+        resp.write(stream)?;
     } else {
-        write_response(
-            stream,
-            &response::Response::new(
-                &req.protocol,
-                String::from("404"),
-                String::from("Not Found"),
-            ),
-        )?;
+        router::internal_err_response(&req).write(stream)?;
     }
 
-    Ok(())
-}
-
-fn write_response(stream: &mut TcpStream, resp: &response::Response) -> Result<()> {
-    let head = format!(
-        "{} {} {}",
-        resp.protocol, resp.status_code, resp.status_phrase
-    );
-
-    stream.write_all(head.as_bytes())?;
-    stream.write_all(CRLF)?;
-    stream.write_all(CRLF)?;
-    stream.flush()?;
     Ok(())
 }
