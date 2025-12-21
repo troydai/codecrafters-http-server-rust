@@ -287,3 +287,68 @@ fn test_mixed_add_read_write() {
     assert!(output.contains("accept: text/html\r\n"));
     assert!(output.contains("x-custom: value1\r\n"));
 }
+
+// Tests for set() method
+#[test]
+fn test_set_new_header() {
+    let mut headers = Headers::new();
+    headers.set("content-type", "application/json");
+
+    assert_eq!(headers.get("content-type"), Some("application/json"));
+}
+
+#[test]
+fn test_set_overwrites_existing_single_value() {
+    let mut headers = Headers::new();
+    headers.set("content-type", "text/html");
+    headers.set("content-type", "application/json");
+
+    assert_eq!(headers.get("content-type"), Some("application/json"));
+}
+
+#[test]
+fn test_set_does_not_normalize_case() {
+    // Note: set() does not convert names to lowercase unlike add()
+    // This test documents the current behavior
+    let mut headers = Headers::new();
+    headers.set("Content-Type", "application/json");
+
+    // get() normalizes to lowercase, but set() stored with original case
+    // so lookup fails
+    assert!(headers.get("content-type").is_none());
+}
+
+#[test]
+fn test_set_overwrites_existing_multiple_values() {
+    let mut headers = Headers::new();
+    headers.add("accept", "text/html");
+    headers.add("accept", "application/xml");
+    headers.add("accept", "text/plain");
+
+    // set should clear all values and replace with single value
+    headers.set("accept", "application/json");
+
+    assert_eq!(headers.get("accept"), Some("application/json"));
+}
+
+#[test]
+fn test_set_then_write() {
+    let mut headers = Headers::new();
+    headers.set("content-type", "application/json");
+
+    let mut buffer = Vec::new();
+    headers.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert_eq!(output, "content-type: application/json\r\n");
+}
+
+#[test]
+fn test_set_multiple_different_headers() {
+    let mut headers = Headers::new();
+    headers.set("content-type", "application/json");
+    headers.set("accept", "text/html");
+
+    assert_eq!(headers.get("content-type"), Some("application/json"));
+    assert_eq!(headers.get("accept"), Some("text/html"));
+}
