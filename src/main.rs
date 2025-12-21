@@ -8,20 +8,25 @@ mod router;
 use anyhow::Result;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use threadpool::ThreadPool;
 
 fn main() {
     // You can use print statements as follows for debugging,
     // they'll be visible when running tests.
     println!("Logs from your program will appear here!");
 
+    let thread_pool = ThreadPool::new(16);
+
     let listener = TcpListener::bind("127.0.0.1:4221").unwrap();
 
     for stream in listener.incoming() {
         match stream {
             Ok(mut stream) => {
-                if let Err(e) = process_stream(&mut stream) {
-                    println!("failed connection: {e}");
-                }
+                thread_pool.execute(move || {
+                    if let Err(e) = process_stream(&mut stream) {
+                        println!("failed connection: {e}");
+                    }
+                });
             }
             Err(e) => {
                 println!("error: {e}");

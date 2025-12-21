@@ -9,6 +9,7 @@ rust-version = "1.91"
 anyhow = "1.0.100"                               # error handling
 bytes = "1.3.0"                                  # helps manage buffers
 thiserror = "1.0.38"                             # error handling
+threadpool = "1.8.1"                             # thread pooling
 
 [lints.rust]
 unsafe_code = "warn"

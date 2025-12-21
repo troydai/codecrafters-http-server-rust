@@ -146,7 +146,10 @@ fn test_write_multiple_values_same_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert_eq!(output, "accept: text/html, application/json, application/xml\r\n");
+    assert_eq!(
+        output,
+        "accept: text/html, application/json, application/xml\r\n"
+    );
 }
 
 #[test]
@@ -163,7 +166,9 @@ fn test_write_empty_headers() {
 #[test]
 fn test_read_with_spaces_around_name_and_value() {
     let mut headers = Headers::new();
-    headers.read(b"  Content-Type  :  application/json  ").unwrap();
+    headers
+        .read(b"  Content-Type  :  application/json  ")
+        .unwrap();
 
     assert_eq!(headers.get("content-type"), Some("application/json"));
 }
