@@ -2,94 +2,94 @@ use super::method::HttpMethod;
 use super::status::HttpStatus;
 
 #[test]
-fn test_from_str_get() {
-    let method = HttpMethod::from_str("GET").unwrap();
+fn test_parse_get() {
+    let method: HttpMethod = "GET".parse().unwrap();
     assert_eq!(method, HttpMethod::Get);
 }
 
 #[test]
-fn test_from_str_post() {
-    let method = HttpMethod::from_str("POST").unwrap();
+fn test_parse_post() {
+    let method: HttpMethod = "POST".parse().unwrap();
     assert_eq!(method, HttpMethod::Post);
 }
 
 #[test]
-fn test_from_str_put() {
-    let method = HttpMethod::from_str("PUT").unwrap();
+fn test_parse_put() {
+    let method: HttpMethod = "PUT".parse().unwrap();
     assert_eq!(method, HttpMethod::Put);
 }
 
 #[test]
-fn test_from_str_delete() {
-    let method = HttpMethod::from_str("DELETE").unwrap();
+fn test_parse_delete() {
+    let method: HttpMethod = "DELETE".parse().unwrap();
     assert_eq!(method, HttpMethod::Delete);
 }
 
 #[test]
-fn test_from_str_patch() {
-    let method = HttpMethod::from_str("PATCH").unwrap();
+fn test_parse_patch() {
+    let method: HttpMethod = "PATCH".parse().unwrap();
     assert_eq!(method, HttpMethod::Patch);
 }
 
 #[test]
-fn test_from_str_head() {
-    let method = HttpMethod::from_str("HEAD").unwrap();
+fn test_parse_head() {
+    let method: HttpMethod = "HEAD".parse().unwrap();
     assert_eq!(method, HttpMethod::Head);
 }
 
 #[test]
-fn test_from_str_options() {
-    let method = HttpMethod::from_str("OPTIONS").unwrap();
+fn test_parse_options() {
+    let method: HttpMethod = "OPTIONS".parse().unwrap();
     assert_eq!(method, HttpMethod::Options);
 }
 
 #[test]
-fn test_from_str_connect() {
-    let method = HttpMethod::from_str("CONNECT").unwrap();
+fn test_parse_connect() {
+    let method: HttpMethod = "CONNECT".parse().unwrap();
     assert_eq!(method, HttpMethod::Connect);
 }
 
 #[test]
-fn test_from_str_trace() {
-    let method = HttpMethod::from_str("TRACE").unwrap();
+fn test_parse_trace() {
+    let method: HttpMethod = "TRACE".parse().unwrap();
     assert_eq!(method, HttpMethod::Trace);
 }
 
 #[test]
-fn test_from_str_invalid_method() {
-    let result = HttpMethod::from_str("INVALID");
+fn test_parse_invalid_method() {
+    let result = "INVALID".parse::<HttpMethod>();
     assert!(result.is_err());
 }
 
 #[test]
-fn test_from_str_lowercase_get_fails() {
-    let result = HttpMethod::from_str("get");
+fn test_parse_lowercase_get_fails() {
+    let result = "get".parse::<HttpMethod>();
     assert!(result.is_err());
 }
 
 #[test]
-fn test_from_str_lowercase_post_fails() {
-    let result = HttpMethod::from_str("post");
+fn test_parse_lowercase_post_fails() {
+    let result = "post".parse::<HttpMethod>();
     assert!(result.is_err());
 }
 
 #[test]
-fn test_from_str_empty_string_fails() {
-    let result = HttpMethod::from_str("");
+fn test_parse_empty_string_fails() {
+    let result = "".parse::<HttpMethod>();
     assert!(result.is_err());
 }
 
 #[test]
 fn test_method_equality() {
-    let get1 = HttpMethod::from_str("GET").unwrap();
-    let get2 = HttpMethod::from_str("GET").unwrap();
+    let get1: HttpMethod = "GET".parse().unwrap();
+    let get2: HttpMethod = "GET".parse().unwrap();
     assert_eq!(get1, get2);
 }
 
 #[test]
 fn test_method_inequality() {
-    let get = HttpMethod::from_str("GET").unwrap();
-    let post = HttpMethod::from_str("POST").unwrap();
+    let get: HttpMethod = "GET".parse().unwrap();
+    let post: HttpMethod = "POST".parse().unwrap();
     assert_ne!(get, post);
 }
 

@@ -70,7 +70,7 @@ impl Request {
         if self.path.is_none() {
             // expect this bytes slice represents the request line
             let rl = RequestLine::from_bytes(bytes)?;
-            self.method = Some(HttpMethod::from_str(rl.method)?);
+            self.method = Some(rl.method.parse()?);
             self.path = Some(String::from(rl.path));
         } else {
             // the request is already initialized. each of the remaining calls
