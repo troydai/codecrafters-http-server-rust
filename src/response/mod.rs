@@ -1,11 +1,10 @@
-use crate::consts::CRLF;
+use crate::consts::{self, CRLF};
 use crate::header::{Header, Headers};
 use anyhow::{Result, bail};
 use std::io::Write;
 
 #[derive(Debug)]
 pub struct Response {
-    protocol: String,
     status_code: String,
     status_phrase: String,
     headers: Headers,
@@ -13,9 +12,8 @@ pub struct Response {
 }
 
 impl Response {
-    pub fn new(protocol: &str, status_code: String, status_phrase: String) -> Self {
+    pub const fn new(status_code: String, status_phrase: String) -> Self {
         Self {
-            protocol: String::from(protocol),
             status_code,
             status_phrase,
             headers: Headers::new(),
@@ -23,13 +21,12 @@ impl Response {
         }
     }
 
-    pub fn with_body(protocol: &str, body: &str) -> Self {
+    pub fn with_body(body: &str) -> Self {
         let mut headers = Headers::new();
         headers.add_header(Header::new("Content-Type", "text/plain"));
         headers.add_header(Header::new("Content-Length", &body.len().to_string()));
 
         Self {
-            protocol: String::from(protocol),
             status_code: String::from("200"),
             status_phrase: String::from("OK"),
             headers,
@@ -40,7 +37,9 @@ impl Response {
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         let head = format!(
             "{} {} {}",
-            self.protocol, self.status_code, self.status_phrase
+            consts::STR_HTTP_1_1,
+            self.status_code,
+            self.status_phrase
         );
 
         stream.write_all(head.as_bytes())?;
@@ -62,4 +61,25 @@ impl Response {
         stream.flush()?;
         Ok(())
     }
+}
+
+pub fn internal_err_response() -> Response {
+    Response::new(String::from("500"), String::from("Internal Server Error"))
+}
+
+pub fn bad_request(body: &str) -> Response {
+    Response {
+        status_code: String::from("400"),
+        status_phrase: String::from("Bad Request"),
+        headers: Headers::new(),
+        body: Some(Vec::from(body.as_bytes())),
+    }
+}
+
+pub fn ok() -> Response {
+    Response::new(String::from("200"), String::from("OK"))
+}
+
+pub fn not_found() -> Response {
+    Response::new(String::from("404"), String::from("Not Found"))
 }

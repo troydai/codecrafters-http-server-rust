@@ -1,34 +1,27 @@
-use crate::request::Request;
 use crate::response::Response;
+use crate::{request::Request, response};
 
 use anyhow::{Ok, Result};
 
 pub fn handle(req: &Request) -> Result<Response> {
     if req.path() == "/" {
-        return Ok(Response::new(
-            &req.protocol,
-            String::from("200"),
-            String::from("OK"),
-        ));
+        return Ok(response::ok());
     }
 
     if req.path().starts_with("/echo/") {
         let message = &req.path()[6..];
-        let resp = Response::with_body(&req.protocol, message);
+        let resp = Response::with_body(message);
         return Ok(resp);
     }
 
-    Ok(Response::new(
-        &req.protocol,
-        String::from("404"),
-        String::from("Not Found"),
-    ))
-}
+    if req.path() == "/user-agent" {
+        if let Some(values) = req.headers().value("User-Agent") {
+            let resp = response::Response::with_body(values.first_value());
+            return Ok(resp);
+        }
 
-pub fn internal_err_response(req: &Request) -> Response {
-    Response::new(
-        &req.protocol,
-        String::from("500"),
-        String::from("Internal Server Error"),
-    )
+        return Ok(response::bad_request("missing user-agent header"));
+    }
+
+    Ok(response::not_found())
 }

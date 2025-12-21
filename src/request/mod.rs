@@ -9,10 +9,10 @@ use crate::header::Headers;
 
 #[derive(Debug)]
 pub struct Request {
+    _protocol: String,
     _method: String,
-    _headers: Headers,
+    headers: Headers,
     path: String,
-    pub protocol: String,
 }
 
 pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
@@ -73,13 +73,17 @@ impl Request {
 
         Ok(Self {
             _method: String::from(parts[0]).to_uppercase(),
-            _headers: headers,
+            headers,
             path: String::from(parts[1]),
-            protocol: String::from(parts[2]),
+            _protocol: String::from(parts[2]),
         })
     }
 
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    pub const fn headers(&self) -> &Headers {
+        &self.headers
     }
 }

@@ -38,7 +38,7 @@ fn process_stream(stream: &mut TcpStream) -> Result<()> {
     if let Ok(resp) = router::handle(&req) {
         resp.write(stream)?;
     } else {
-        router::internal_err_response(&req).write(stream)?;
+        response::internal_err_response().write(stream)?;
     }
 
     Ok(())

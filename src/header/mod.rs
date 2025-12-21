@@ -32,6 +32,10 @@ impl Headers {
     pub fn vec(&self) -> Vec<&Header> {
         self.headers.iter().collect::<Vec<_>>()
     }
+
+    pub fn value(&self, name: &str) -> Option<&Header> {
+        self.headers.iter().find(|h| h.name == name)
+    }
 }
 
 #[derive(Debug)]
@@ -49,10 +53,14 @@ impl Header {
         }
     }
 
+    pub fn first_value(&self) -> &str {
+        &self.values[0]
+    }
+
     pub fn from_str(s: &str) -> Result<Self> {
         if let Some(idx) = s.find(':') {
             let name = String::from(&s[0..idx]);
-            let values: Vec<String> = Vec::from([String::from(&s[idx + 1..])]);
+            let values: Vec<String> = Vec::from([String::from(s[idx + 1..].trim())]);
 
             return Ok(Self { name, values });
         }
