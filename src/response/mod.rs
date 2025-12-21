@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-mod status;
-
 use crate::consts::CRLF;
 use crate::header::Headers;
-use crate::response::status::HttpStatus;
+use crate::http::status::HttpStatus;
 use anyhow::Result;
 use std::io::Write;
 
