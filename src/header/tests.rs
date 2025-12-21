@@ -1,79 +1,101 @@
-use super::{Header, Headers};
+use super::Headers;
 
 #[test]
-fn test_header_new_stores_name_lowercase() {
-    let header = Header::new("Content-Type", "application/json");
-    assert_eq!(header.name, "content-type");
-    assert_eq!(header.first_value(), "application/json");
-}
-
-#[test]
-fn test_header_new_preserves_already_lowercase() {
-    let header = Header::new("accept", "text/html");
-    assert_eq!(header.name, "accept");
-}
-
-#[test]
-fn test_header_from_str_stores_name_lowercase() {
-    let header = Header::from_str("Content-Type: application/json").unwrap();
-    assert_eq!(header.name, "content-type");
-    assert_eq!(header.first_value(), "application/json");
-}
-
-#[test]
-fn test_header_from_str_mixed_case() {
-    let header = Header::from_str("X-Custom-Header: some-value").unwrap();
-    assert_eq!(header.name, "x-custom-header");
-}
-
-#[test]
-fn test_headers_value_case_insensitive_lookup() {
+fn test_add_stores_name_lowercase() {
     let mut headers = Headers::new();
-    headers.add_header(Header::new("Content-Type", "application/json"));
+    headers.add("Content-Type", "application/json");
+
+    // Should be stored lowercase
+    assert_eq!(headers.get("content-type"), Some("application/json"));
+}
+
+#[test]
+fn test_add_preserves_already_lowercase() {
+    let mut headers = Headers::new();
+    headers.add("accept", "text/html");
+
+    assert_eq!(headers.get("accept"), Some("text/html"));
+}
+
+#[test]
+fn test_read_stores_name_lowercase() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Type: application/json").unwrap();
+
+    assert_eq!(headers.get("content-type"), Some("application/json"));
+}
+
+#[test]
+fn test_read_mixed_case() {
+    let mut headers = Headers::new();
+    headers.read(b"X-Custom-Header: some-value").unwrap();
+
+    assert_eq!(headers.get("x-custom-header"), Some("some-value"));
+}
+
+#[test]
+fn test_get_case_insensitive_lookup() {
+    let mut headers = Headers::new();
+    headers.add("Content-Type", "application/json");
 
     // Should find with exact lowercase
-    assert!(headers.value("content-type").is_some());
+    assert!(headers.get("content-type").is_some());
 
     // Should find with original case
-    assert!(headers.value("Content-Type").is_some());
+    assert!(headers.get("Content-Type").is_some());
 
     // Should find with uppercase
-    assert!(headers.value("CONTENT-TYPE").is_some());
+    assert!(headers.get("CONTENT-TYPE").is_some());
 
     // Should find with mixed case
-    assert!(headers.value("CoNtEnT-TyPe").is_some());
+    assert!(headers.get("CoNtEnT-TyPe").is_some());
 }
 
 #[test]
-fn test_headers_value_returns_correct_header() {
+fn test_get_returns_correct_value() {
     let mut headers = Headers::new();
-    headers.add_header(Header::new("Accept", "text/html"));
-    headers.add_header(Header::new("Content-Type", "application/json"));
+    headers.add("Accept", "text/html");
+    headers.add("Content-Type", "application/json");
 
-    let header = headers.value("CONTENT-TYPE").unwrap();
-    assert_eq!(header.first_value(), "application/json");
+    assert_eq!(headers.get("CONTENT-TYPE"), Some("application/json"));
+    assert_eq!(headers.get("accept"), Some("text/html"));
 }
 
 #[test]
-fn test_headers_value_not_found() {
+fn test_get_not_found() {
     let mut headers = Headers::new();
-    headers.add_header(Header::new("Content-Type", "application/json"));
+    headers.add("Content-Type", "application/json");
 
-    assert!(headers.value("Accept").is_none());
+    assert!(headers.get("Accept").is_none());
 }
 
 #[test]
-fn test_headers_from_bytes_case_insensitive() {
-    let data: Vec<Vec<u8>> = vec![
-        b"Content-Type: application/json".to_vec(),
-        b"X-REQUEST-ID: 12345".to_vec(),
-    ];
-
-    let headers = Headers::from_bytes(&data).unwrap();
+fn test_read_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Type: application/json").unwrap();
+    headers.read(b"X-REQUEST-ID: 12345").unwrap();
 
     // Both should be findable with any case
-    assert!(headers.value("content-type").is_some());
-    assert!(headers.value("CONTENT-TYPE").is_some());
-    assert!(headers.value("x-request-id").is_some());
-    assert!(headers.value("X-Request-Id").is_some());
+    assert!(headers.get("content-type").is_some());
+    assert!(headers.get("CONTENT-TYPE").is_some());
+    assert!(headers.get("x-request-id").is_some());
+    assert!(headers.get("X-Request-Id").is_some());
+}
+
+#[test]
+fn test_read_invalid_format() {
+    let mut headers = Headers::new();
+    let result = headers.read(b"InvalidHeaderWithoutColon");
+
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_add_multiple_values_same_header() {
+    let mut headers = Headers::new();
+    headers.add("Accept", "text/html");
+    headers.add("Accept", "application/json");
+
+    // get() returns the first value
+    assert_eq!(headers.get("accept"), Some("text/html"));
 }

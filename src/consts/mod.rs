@@ -4,3 +4,5 @@ pub const COMMA: &[u8] = b",";
 pub const SPACE: &[u8] = b" ";
 
 pub const STR_HTTP_1_1: &str = "HTTP/1.1";
+
+pub const HEADER_USER_AGENT: &str = "User-Agent";

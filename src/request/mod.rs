@@ -1,22 +1,26 @@
 #[cfg(test)]
 mod tests;
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow};
 use std::io::Read;
 
-use crate::consts::CRLF;
+use crate::consts::{self, CRLF};
 use crate::header::Headers;
 
 #[derive(Debug)]
 pub struct Request {
-    _protocol: String,
-    _method: String,
+    method: String,
     headers: Headers,
-    path: String,
+    path: Option<String>,
 }
 
 pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
-    let mut headers: Vec<Vec<u8>> = Vec::new();
+    let mut req = Request {
+        method: String::new(),
+        headers: Headers::new(),
+        path: None,
+    };
+
     let mut current_line: Vec<u8> = Vec::new();
 
     'parent: loop {
@@ -39,7 +43,7 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
                     break 'parent;
                 }
 
-                headers.push(current_line.clone());
+                req.fill(&current_line)?;
                 current_line.clear();
 
                 start = end + 2;
@@ -52,38 +56,83 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
         }
     }
 
-    Request::from_header(headers)
+    Ok(req)
 }
 
 impl Request {
-    pub fn from_header(headers: Vec<Vec<u8>>) -> Result<Self> {
-        if headers.is_empty() {
-            bail!("invalid headers number")
+    /// fill allows the client to gradually build up a HTTP request line
+    /// by line. This method is desgined to be called by a reader of the
+    /// `TcpStream`. In each call, a slice of bytes represents a line ends
+    /// by CRLF. The first call to this function is expected to give it
+    /// the request line. After that each call represent a header.
+    fn fill(&mut self, bytes: &[u8]) -> Result<()> {
+        if self.path.is_none() {
+            // expect this bytes slice represents the request line
+            let rl = RequestLine::from_bytes(bytes)?;
+            self.method = String::from(rl.method);
+            self.path = Some(String::from(rl.path));
+        } else {
+            // the request is already initialized. each of the remaining calls
+            // represent a line of headers
+            self.headers.read(bytes)?;
         }
 
-        // extract method, path, and protocol from first line
-        let first_line_bytes = headers[0].clone();
-        let first_line_str = std::str::from_utf8(&first_line_bytes)?;
-        let parts: Vec<&str> = first_line_str.split(' ').collect();
-        if parts.len() < 3 {
-            bail!("request's first line is malformed. fewer than 3 parts")
-        }
-
-        let headers = Headers::from_bytes(&headers.into_iter().skip(1).collect::<Vec<_>>())?;
-
-        Ok(Self {
-            _method: String::from(parts[0]).to_uppercase(),
-            headers,
-            path: String::from(parts[1]),
-            _protocol: String::from(parts[2]),
-        })
+        Ok(())
     }
 
-    pub fn path(&self) -> &str {
-        &self.path
+    pub fn path_match_exact(&self, pattern: &str) -> bool {
+        if let Some(p) = self.path.as_ref() {
+            return pattern == p;
+        }
+
+        false
+    }
+
+    pub fn path_match_prefix(&self, pattern: &str) -> bool {
+        if let Some(p) = self.path.as_ref() {
+            return p.starts_with(pattern);
+        }
+
+        false
+    }
+
+    pub fn path(&self) -> Result<&str> {
+        if let Some(p) = self.path.as_ref() {
+            return Ok(p);
+        }
+
+        Err(anyhow!("request is not initialized"))
     }
 
     pub const fn headers(&self) -> &Headers {
         &self.headers
+    }
+}
+
+struct RequestLine<'a> {
+    method: &'a str,
+    path: &'a str,
+}
+
+impl<'a> RequestLine<'a> {
+    pub fn from_bytes(bytes: &'a [u8]) -> Result<Self> {
+        let parts = std::str::from_utf8(bytes)?
+            .split(' ')
+            .collect::<Vec<&str>>();
+
+        if parts.len() < 3 {
+            return Err(anyhow::anyhow!(
+                "request's first line is malformed. fewer than 3 parts"
+            ));
+        }
+
+        if parts[2] != consts::STR_HTTP_1_1 {
+            return Err(anyhow::anyhow!("protocol {} is not supported", parts[2]));
+        }
+
+        Ok(RequestLine {
+            method: parts[0],
+            path: parts[1],
+        })
     }
 }

@@ -1,6 +1,6 @@
 use crate::consts::{self, CRLF};
-use crate::header::{Header, Headers};
-use anyhow::{Result, bail};
+use crate::header::Headers;
+use anyhow::Result;
 use std::io::Write;
 
 #[derive(Debug)]
@@ -12,7 +12,7 @@ pub struct Response {
 }
 
 impl Response {
-    pub const fn new(status_code: String, status_phrase: String) -> Self {
+    pub fn new(status_code: String, status_phrase: String) -> Self {
         Self {
             status_code,
             status_phrase,
@@ -23,8 +23,8 @@ impl Response {
 
     pub fn with_body(body: &str) -> Self {
         let mut headers = Headers::new();
-        headers.add_header(Header::new("Content-Type", "text/plain"));
-        headers.add_header(Header::new("Content-Length", &body.len().to_string()));
+        headers.add("Content-Type", "text/plain");
+        headers.add("Content-Length", &body.len().to_string());
 
         Self {
             status_code: String::from("200"),
@@ -45,12 +45,7 @@ impl Response {
         stream.write_all(head.as_bytes())?;
         stream.write_all(CRLF)?;
 
-        if let Err(e) = self.headers.vec().iter().try_for_each(|h| -> Result<()> {
-            stream.write_all(&h.wire_representation())?;
-            Ok(())
-        }) {
-            bail!("failed to write {e} headers")
-        }
+        self.headers.write(stream)?;
 
         // empty line to separate body from headers
         stream.write_all(CRLF)?;
