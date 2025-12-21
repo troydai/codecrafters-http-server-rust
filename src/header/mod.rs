@@ -42,12 +42,6 @@ impl Headers {
         None
     }
 
-    /* For future use
-
-    pub fn delete(&mut self, name: &str) {
-        let _ = self.headers.remove(name);
-    }
-
     /// set clears all values associated with the given name and set
     /// its value to the singe value provided.
     pub fn set(&mut self, name: &str, value: &str) {
@@ -58,8 +52,15 @@ impl Headers {
                 coll.clear();
                 coll.push(String::from(value));
             })
-            .or_insert(Vec::from([String::from(value)]));
+            .or_insert_with(|| Vec::from([String::from(value)]));
     }
+
+    /* For future use
+
+    pub fn delete(&mut self, name: &str) {
+        let _ = self.headers.remove(name);
+    }
+
 
     */
 

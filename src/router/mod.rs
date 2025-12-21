@@ -11,13 +11,17 @@ pub fn handle(req: &Request) -> Result<Response> {
 
     if req.path_match_prefix("/echo/") {
         let message = &req.path()?[6..];
-        let resp = Response::with_body(message);
+        let mut resp = response::ok();
+        resp.set_body(message);
         return Ok(resp);
     }
 
     if req.path_match_exact("/user-agent") {
         if let Some(value) = req.headers().get(consts::HEADER_USER_AGENT) {
-            return Ok(response::Response::with_body(value));
+            let mut resp = response::ok();
+            resp.set_body(value);
+
+            return Ok(resp);
         }
 
         return Ok(response::bad_request("missing user-agent header"));
