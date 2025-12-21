@@ -19,7 +19,7 @@ pub enum HttpMethod {
 impl FromStr for HttpMethod {
     type Err = anyhow::Error;
 
-    /// `from_str` return a `HttpMethod` from the given string.
+    /// Returns an `HttpMethod` parsed from the given string.
     fn from_str(s: &str) -> Result<Self> {
         match s {
             "GET" => Ok(Self::Get),

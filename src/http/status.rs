@@ -15,8 +15,8 @@ pub enum HttpStatus {
 }
 
 impl HttpStatus {
-    pub fn write_request_line(&self, stream: &mut impl std::io::Write) -> Result<()> {
-        // A request line of HTTP/1.1 looks like this
+    pub fn write_status_line(&self, stream: &mut impl std::io::Write) -> Result<()> {
+        // A status line of HTTP/1.1 looks like this
         // HTTP/1.1 200 OK
         // HTTP/1.1 404 Not Found
 

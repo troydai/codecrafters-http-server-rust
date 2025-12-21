@@ -31,7 +31,7 @@ impl Response {
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
-        self.status.write_request_line(stream)?;
+        self.status.write_status_line(stream)?;
         self.headers.write(stream)?;
 
         // empty line to separate body from headers

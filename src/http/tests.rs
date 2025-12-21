@@ -110,44 +110,44 @@ fn test_method_debug() {
 // HttpStatus tests
 
 #[test]
-fn test_status_ok_write_request_line() {
+fn test_status_ok_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::Ok.write_request_line(&mut buffer).unwrap();
+    HttpStatus::Ok.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 200 OK\r\n");
 }
 
 #[test]
-fn test_status_bad_request_write_request_line() {
+fn test_status_bad_request_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::BadRequest.write_request_line(&mut buffer).unwrap();
+    HttpStatus::BadRequest.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 400 Bad Request\r\n");
 }
 
 #[test]
-fn test_status_unauthorized_write_request_line() {
+fn test_status_unauthorized_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::Unauthorized.write_request_line(&mut buffer).unwrap();
+    HttpStatus::Unauthorized.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 401 Unauthorized\r\n");
 }
 
 #[test]
-fn test_status_forbidden_write_request_line() {
+fn test_status_forbidden_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::Forbidden.write_request_line(&mut buffer).unwrap();
+    HttpStatus::Forbidden.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 403 Forbidden\r\n");
 }
 
 #[test]
-fn test_status_not_found_write_request_line() {
+fn test_status_not_found_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::NotFound.write_request_line(&mut buffer).unwrap();
+    HttpStatus::NotFound.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 404 Not Found\r\n");
 }
 
 #[test]
-fn test_status_internal_server_error_write_request_line() {
+fn test_status_internal_server_error_write_status_line() {
     let mut buffer = Vec::new();
-    HttpStatus::InternalServerError.write_request_line(&mut buffer).unwrap();
+    HttpStatus::InternalServerError.write_status_line(&mut buffer).unwrap();
     assert_eq!(buffer, b"HTTP/1.1 500 Internal Server Error\r\n");
 }
 
