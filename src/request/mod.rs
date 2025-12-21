@@ -5,11 +5,12 @@ use anyhow::{Result, bail};
 use std::io::Read;
 
 use crate::consts::CRLF;
+use crate::header::Headers;
 
 #[derive(Debug)]
 pub struct Request {
     _method: String,
-    _headers: Vec<Vec<u8>>,
+    _headers: Headers,
     path: String,
     pub protocol: String,
 }
@@ -68,9 +69,11 @@ impl Request {
             bail!("request's first line is malformed. fewer than 3 parts")
         }
 
+        let headers = Headers::from_bytes(&headers.into_iter().skip(1).collect::<Vec<_>>())?;
+
         Ok(Self {
             _method: String::from(parts[0]).to_uppercase(),
-            _headers: headers.into_iter().skip(1).collect(),
+            _headers: headers,
             path: String::from(parts[1]),
             protocol: String::from(parts[2]),
         })

@@ -14,7 +14,8 @@ pub fn handle(req: &Request) -> Result<Response> {
 
     if req.path().starts_with("/echo/") {
         let message = &req.path()[6..];
-        return Ok(Response::with_body(&req.protocol, message));
+        let resp = Response::with_body(&req.protocol, message);
+        return Ok(resp);
     }
 
     Ok(Response::new(

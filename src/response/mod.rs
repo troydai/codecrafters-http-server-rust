@@ -1,4 +1,5 @@
 use crate::consts::CRLF;
+use crate::header::{Header, Headers};
 use anyhow::{Result, bail};
 use std::io::Write;
 
@@ -7,7 +8,7 @@ pub struct Response {
     protocol: String,
     status_code: String,
     status_phrase: String,
-    headers: Vec<String>,
+    headers: Headers,
     body: Option<Vec<u8>>,
 }
 
@@ -17,16 +18,15 @@ impl Response {
             protocol: String::from(protocol),
             status_code,
             status_phrase,
-            headers: Vec::new(),
+            headers: Headers::new(),
             body: None,
         }
     }
 
     pub fn with_body(protocol: &str, body: &str) -> Self {
-        let headers = vec![
-            String::from("Content-Type: text/plain"),
-            format!("Content-Length: {}", body.len()),
-        ];
+        let mut headers = Headers::new();
+        headers.add_header(Header::new("Content-Type", "text/plain"));
+        headers.add_header(Header::new("Content-Length", &body.len().to_string()));
 
         Self {
             protocol: String::from(protocol),
@@ -46,9 +46,8 @@ impl Response {
         stream.write_all(head.as_bytes())?;
         stream.write_all(CRLF)?;
 
-        if let Err(e) = self.headers.iter().try_for_each(|h| -> Result<()> {
-            stream.write_all(h.as_bytes())?;
-            stream.write_all(CRLF)?;
+        if let Err(e) = self.headers.vec().iter().try_for_each(|h| -> Result<()> {
+            stream.write_all(&h.wire_representation())?;
             Ok(())
         }) {
             bail!("failed to write {e} headers")
