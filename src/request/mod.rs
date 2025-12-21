@@ -6,18 +6,19 @@ use std::io::Read;
 
 use crate::consts::{self, CRLF};
 use crate::header::Headers;
+use crate::http::method::HttpMethod;
 
 #[derive(Debug)]
 pub struct Request {
-    method: String,
-    headers: Headers,
+    method: Option<HttpMethod>,
     path: Option<String>,
+    headers: Headers,
 }
 
 pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
     let mut req = Request {
-        method: String::new(),
         headers: Headers::new(),
+        method: None,
         path: None,
     };
 
@@ -69,7 +70,7 @@ impl Request {
         if self.path.is_none() {
             // expect this bytes slice represents the request line
             let rl = RequestLine::from_bytes(bytes)?;
-            self.method = String::from(rl.method);
+            self.method = Some(rl.method.parse()?);
             self.path = Some(String::from(rl.path));
         } else {
             // the request is already initialized. each of the remaining calls

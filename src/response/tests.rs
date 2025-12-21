@@ -129,62 +129,62 @@ fn test_internal_err_response_returns_500() {
     assert!(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
 }
 
-// Tests for HttpStatus::write_request_line()
+// Tests for HttpStatus::write_status_line()
 #[test]
-fn test_status_write_request_line_ok() {
+fn test_status_write_status_line_ok() {
     let status = HttpStatus::Ok;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 200 OK\r\n");
 }
 
 #[test]
-fn test_status_write_request_line_bad_request() {
+fn test_status_write_status_line_bad_request() {
     let status = HttpStatus::BadRequest;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 400 Bad Request\r\n");
 }
 
 #[test]
-fn test_status_write_request_line_unauthorized() {
+fn test_status_write_status_line_unauthorized() {
     let status = HttpStatus::Unauthorized;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 401 Unauthorized\r\n");
 }
 
 #[test]
-fn test_status_write_request_line_forbidden() {
+fn test_status_write_status_line_forbidden() {
     let status = HttpStatus::Forbidden;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 403 Forbidden\r\n");
 }
 
 #[test]
-fn test_status_write_request_line_not_found() {
+fn test_status_write_status_line_not_found() {
     let status = HttpStatus::NotFound;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 404 Not Found\r\n");
 }
 
 #[test]
-fn test_status_write_request_line_internal_server_error() {
+fn test_status_write_status_line_internal_server_error() {
     let status = HttpStatus::InternalServerError;
     let mut buffer = Vec::new();
-    status.write_request_line(&mut buffer).unwrap();
+    status.write_status_line(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 500 Internal Server Error\r\n");

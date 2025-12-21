@@ -1,11 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-mod status;
-
 use crate::consts::CRLF;
 use crate::header::Headers;
-use crate::response::status::HttpStatus;
+use crate::http::status::HttpStatus;
 use anyhow::Result;
 use std::io::Write;
 
@@ -33,7 +31,7 @@ impl Response {
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
-        self.status.write_request_line(stream)?;
+        self.status.write_status_line(stream)?;
         self.headers.write(stream)?;
 
         // empty line to separate body from headers
