@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crate::consts;
 use anyhow::Result;
 
@@ -33,8 +36,10 @@ impl Headers {
         self.headers.iter().collect::<Vec<_>>()
     }
 
+    // return the headers of the given name. none if the name does not
+    // match any headers
     pub fn value(&self, name: &str) -> Option<&Header> {
-        self.headers.iter().find(|h| h.name == name)
+        self.headers.iter().find(|h| h.name == name.to_lowercase())
     }
 }
 
@@ -48,7 +53,7 @@ impl Header {
     pub fn new(name: &str, value: &str) -> Self {
         let values: Vec<String> = Vec::from([String::from(value)]);
         Self {
-            name: String::from(name),
+            name: String::from(name.to_lowercase()),
             values,
         }
     }
@@ -59,7 +64,7 @@ impl Header {
 
     pub fn from_str(s: &str) -> Result<Self> {
         if let Some(idx) = s.find(':') {
-            let name = String::from(&s[0..idx]);
+            let name = String::from(s[0..idx].to_lowercase());
             let values: Vec<String> = Vec::from([String::from(s[idx + 1..].trim())]);
 
             return Ok(Self { name, values });
