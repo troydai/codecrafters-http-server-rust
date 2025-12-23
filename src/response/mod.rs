@@ -23,11 +23,17 @@ impl Response {
         }
     }
 
-    pub fn set_body(&mut self, body: &str) {
+    pub fn set_str_body(&mut self, body: &str) {
         let bytes = body.as_bytes();
         self.headers.set("Content-Type", "text/plain");
         self.headers.set("Content-Length", &bytes.len().to_string());
         self.body = Some(Vec::from(body.as_bytes()));
+    }
+
+    pub fn set_bytes_body(&mut self, content_type: &str, body: &[u8]) {
+        self.headers.set("Content-Type", content_type);
+        self.headers.set("Content-Length", &body.len().to_string());
+        self.body = Some(Vec::from(body));
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
@@ -45,13 +51,9 @@ impl Response {
     }
 }
 
-pub fn internal_err_response() -> Response {
-    Response::new(HttpStatus::InternalServerError)
-}
-
 pub fn bad_request(body: &str) -> Response {
     let mut resp = Response::new(HttpStatus::BadRequest);
-    resp.set_body(body);
+    resp.set_str_body(body);
     resp
 }
 
