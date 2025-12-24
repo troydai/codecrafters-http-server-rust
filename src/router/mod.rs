@@ -1,5 +1,6 @@
 use crate::consts;
 use crate::file;
+use crate::http::status::HttpStatus;
 use crate::response::Response;
 use crate::{request::Request, response};
 
@@ -40,15 +41,24 @@ impl Router {
         if req.path_match_prefix("/files") {
             let path = &req.path()?[7..];
             if path.contains("..") || path.starts_with('/') {
-                return Ok(response::Response::new(
-                    crate::http::status::HttpStatus::Forbidden,
-                ));
+                return Ok(response::Response::new(HttpStatus::Forbidden));
             }
 
-            let content = self.file_server.retrieve(path)?;
-            let mut resp = response::ok();
-            resp.set_bytes_body("application/octet-stream", &content);
-            return Ok(resp);
+            return Ok(self.file_server.retrieve(path).map_or_else(
+                |e| match e {
+                    file::FileRetrieverError::NotFound => {
+                        response::Response::new(HttpStatus::NotFound)
+                    }
+                    file::FileRetrieverError::Other(msg) => {
+                        response::internal_server_error(Some(&msg))
+                    }
+                },
+                |c| {
+                    let mut resp = response::ok();
+                    resp.set_bytes_body("application/octet-stream", &c);
+                    resp
+                },
+            ));
         }
 
         Ok(response::not_found())

@@ -64,3 +64,12 @@ pub fn ok() -> Response {
 pub fn not_found() -> Response {
     Response::new(HttpStatus::NotFound)
 }
+
+pub fn internal_server_error(message: Option<&str>) -> Response {
+    let mut resp = Response::new(HttpStatus::InternalServerError);
+    if let Some(msg) = message {
+        resp.set_str_body(msg);
+    }
+
+    resp
+}

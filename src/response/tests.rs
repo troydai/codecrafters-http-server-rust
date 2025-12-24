@@ -119,6 +119,28 @@ fn test_bad_request_returns_400_with_body() {
     assert!(output.ends_with("Invalid input"));
 }
 
+#[test]
+fn test_internal_server_error_returns_500_without_message() {
+    let resp = internal_server_error(None);
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+    assert!(output.ends_with("\r\n\r\n")); // no body
+}
+
+#[test]
+fn test_internal_server_error_returns_500_with_message() {
+    let resp = internal_server_error(Some("Something went wrong"));
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+    assert!(output.ends_with("Something went wrong"));
+}
+
 // Tests for HttpStatus::write_status_line()
 #[test]
 fn test_status_write_status_line_ok() {

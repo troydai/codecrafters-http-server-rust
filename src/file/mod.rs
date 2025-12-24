@@ -2,12 +2,28 @@
  * This module provides components that offer file serving.
  */
 
-use anyhow::{Result, bail};
-use std::{path::PathBuf, str::FromStr};
+use std::{fmt, path::PathBuf, str::FromStr};
 
 pub trait FileRetriever {
-    fn retrieve(&self, path: &str) -> Result<Vec<u8>>;
+    fn retrieve(&self, path: &str) -> Result<Vec<u8>, FileRetrieverError>;
 }
+
+#[derive(Debug)]
+pub enum FileRetrieverError {
+    NotFound,
+    Other(String),
+}
+
+impl fmt::Display for FileRetrieverError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotFound => write!(f, "file not found"),
+            Self::Other(msg) => write!(f, "file retriever error: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for FileRetrieverError {}
 
 struct LocalFileSystem {
     root: PathBuf,
@@ -16,28 +32,28 @@ struct LocalFileSystem {
 struct Dummy {}
 
 impl FileRetriever for LocalFileSystem {
-    fn retrieve(&self, path: &str) -> Result<Vec<u8>> {
+    fn retrieve(&self, path: &str) -> Result<Vec<u8>, FileRetrieverError> {
         let mut full_path = self.root.clone();
         full_path.push(path);
 
         if !full_path.exists() {
-            bail!("path {} does not exist", full_path.display());
+            return Err(FileRetrieverError::NotFound);
         }
+
         let path = full_path.as_path();
         std::fs::read(path).map_err(|e| {
-            println!("failed to read file at {}: {e}", path.display());
-            anyhow::anyhow!("internal server error")
+            FileRetrieverError::Other(format!("failed to read file at {}: {e}", path.display()))
         })
     }
 }
 
 impl FileRetriever for Dummy {
-    fn retrieve(&self, _path: &str) -> Result<Vec<u8>> {
-        bail!("not implemented");
+    fn retrieve(&self, _path: &str) -> Result<Vec<u8>, FileRetrieverError> {
+        Err(FileRetrieverError::Other(String::from("not implemented")))
     }
 }
 
-pub fn create(input: Option<String>) -> Result<Box<dyn FileRetriever + Send + Sync>> {
+pub fn create(input: Option<String>) -> anyhow::Result<Box<dyn FileRetriever + Send + Sync>> {
     if let Some(path) = input {
         let root = validate_path(&path)?;
         return Ok(Box::new(LocalFileSystem { root }));
@@ -46,7 +62,7 @@ pub fn create(input: Option<String>) -> Result<Box<dyn FileRetriever + Send + Sy
     Ok(Box::new(Dummy {}))
 }
 
-fn validate_path(s: &str) -> Result<PathBuf> {
+fn validate_path(s: &str) -> anyhow::Result<PathBuf> {
     if !s.starts_with('/') {
         anyhow::bail!("The directory path is not started from root.")
     }
