@@ -26,7 +26,7 @@ fn test_new_response_has_no_body() {
 #[test]
 fn test_set_body_adds_content() {
     let mut resp = Response::new(HttpStatus::Ok);
-    resp.set_body("Hello, World!");
+    resp.set_str_body("Hello, World!");
 
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
@@ -38,7 +38,7 @@ fn test_set_body_adds_content() {
 #[test]
 fn test_set_body_sets_content_type() {
     let mut resp = Response::new(HttpStatus::Ok);
-    resp.set_body("test");
+    resp.set_str_body("test");
 
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
@@ -50,7 +50,7 @@ fn test_set_body_sets_content_type() {
 #[test]
 fn test_set_body_sets_content_length() {
     let mut resp = Response::new(HttpStatus::Ok);
-    resp.set_body("Hello");
+    resp.set_str_body("Hello");
 
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
@@ -63,7 +63,7 @@ fn test_set_body_sets_content_length() {
 #[test]
 fn test_write_format_with_body() {
     let mut resp = Response::new(HttpStatus::Ok);
-    resp.set_body("test body");
+    resp.set_str_body("test body");
 
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
@@ -120,13 +120,25 @@ fn test_bad_request_returns_400_with_body() {
 }
 
 #[test]
-fn test_internal_err_response_returns_500() {
-    let resp = internal_err_response();
+fn test_internal_server_error_returns_500_without_message() {
+    let resp = internal_server_error(None);
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
     assert!(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+    assert!(output.ends_with("\r\n\r\n")); // no body
+}
+
+#[test]
+fn test_internal_server_error_returns_500_with_message() {
+    let resp = internal_server_error(Some("Something went wrong"));
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.starts_with("HTTP/1.1 500 Internal Server Error\r\n"));
+    assert!(output.ends_with("Something went wrong"));
 }
 
 // Tests for HttpStatus::write_status_line()
