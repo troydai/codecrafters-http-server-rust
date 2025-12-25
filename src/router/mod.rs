@@ -1,5 +1,7 @@
+use crate::body::HttpBody;
 use crate::consts;
 use crate::file;
+use crate::http::method::HttpMethod;
 use crate::http::status::HttpStatus;
 use crate::response::Response;
 use crate::{request::Request, response};
@@ -7,11 +9,11 @@ use crate::{request::Request, response};
 use anyhow::{Ok, Result};
 
 pub struct Router {
-    file_server: Box<dyn file::FileRetriever + Send + Sync>,
+    file_server: Box<dyn file::FileSystem + Send + Sync>,
 }
 
 impl Router {
-    pub fn new(file_server: Box<dyn file::FileRetriever + Send + Sync>) -> Self {
+    pub fn new(file_server: Box<dyn file::FileSystem + Send + Sync>) -> Self {
         Self { file_server }
     }
 
@@ -39,26 +41,62 @@ impl Router {
         }
 
         if req.path_match_prefix("/files") {
-            let path = &req.path()[7..];
-            if path.contains("..") || path.starts_with('/') {
-                return Ok(response::Response::new(HttpStatus::Forbidden));
-            }
+            return match req.method() {
+                HttpMethod::Get => {
+                    let path = &req.path()[7..];
+                    if path.contains("..") || path.starts_with('/') {
+                        return Ok(response::Response::new(HttpStatus::Forbidden));
+                    }
 
-            return Ok(self.file_server.retrieve(path).map_or_else(
-                |e| match e {
-                    file::FileRetrieverError::NotFound => {
-                        response::Response::new(HttpStatus::NotFound)
+                    return Ok(self.file_server.retrieve(path).map_or_else(
+                        |e| match e {
+                            file::FileRetrieverError::NotFound => {
+                                response::Response::new(HttpStatus::NotFound)
+                            }
+                            file::FileRetrieverError::Other(msg) => {
+                                response::internal_server_error(Some(&msg))
+                            }
+                        },
+                        |c| {
+                            let mut resp = response::ok();
+                            resp.set_bytes_body("application/octet-stream", &c);
+                            resp
+                        },
+                    ));
+                }
+                HttpMethod::Post => {
+                    if req
+                        .headers()
+                        .content_type()
+                        .is_none_or(|v| v != "application/octet-stream")
+                    {
+                        return Ok(response::Response::new(HttpStatus::BadRequest));
                     }
-                    file::FileRetrieverError::Other(msg) => {
-                        response::internal_server_error(Some(&msg))
+
+                    let path = &req.path()[7..];
+                    if path.contains("..") || path.starts_with('/') {
+                        return Ok(response::Response::new(HttpStatus::Forbidden));
                     }
-                },
-                |c| {
-                    let mut resp = response::ok();
-                    resp.set_bytes_body("application/octet-stream", &c);
-                    resp
-                },
-            ));
+
+                    match req.body() {
+                        HttpBody::Empty => Ok(response::Response::new(HttpStatus::NoContent)),
+                        HttpBody::Content(data) => {
+                            Ok(self.file_server.save(path, data).map_or_else(
+                                |e| match e {
+                                    file::FileSaverError::InvalidPath(msg) => {
+                                        response::bad_request(&msg)
+                                    }
+                                    file::FileSaverError::Other(msg) => {
+                                        response::internal_server_error(Some(&msg))
+                                    }
+                                },
+                                |()| response::Response::new(HttpStatus::Created),
+                            ))
+                        }
+                    }
+                }
+                _ => Ok(response::Response::new(HttpStatus::MethodNotAllowed)),
+            };
         }
 
         Ok(response::not_found())

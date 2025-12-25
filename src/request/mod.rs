@@ -4,6 +4,7 @@ mod tests;
 use anyhow::{Result, anyhow};
 use std::io::Read;
 
+use crate::body::HttpBody;
 use crate::consts::{self, CRLF};
 use crate::header::Headers;
 use crate::http::method::HttpMethod;
@@ -14,12 +15,13 @@ pub struct Request {
     method: HttpMethod,
     path: String,
     headers: Headers,
+    body: HttpBody,
 }
 
 pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
     let mut req: Option<Request> = None;
-
     let mut current_line: Vec<u8> = Vec::new();
+    let mut left_over: Vec<u8> = Vec::new();
 
     'parent: loop {
         let mut buf = [0; 1024];
@@ -34,10 +36,12 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
             {
                 // found a CRLF from starting position, append it to the current line
                 // the current line may ore may not be empty.
-                current_line.extend(buf[start..end].iter());
+                current_line.extend_from_slice(&buf[start..end]);
 
-                // end of the headers
+                // end of the headers, push the remaining bytes in the buffer to the left_over
+                // in case they're part of the request body
                 if current_line.is_empty() {
+                    left_over.extend_from_slice(&buf[end + 2..size]);
                     break 'parent;
                 }
 
@@ -60,7 +64,14 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
         }
     }
 
-    req.ok_or_else(|| anyhow!("failed to create request from input"))
+    req.map_or_else(
+        || Err(anyhow!("unable to parse the request")),
+        |mut req| {
+            let content_length = req.headers.content_length()?;
+            req.body = HttpBody::read(Some(&left_over), content_length, reader)?;
+            Ok(req)
+        },
+    )
 }
 
 impl Request {
@@ -73,6 +84,7 @@ impl Request {
             method,
             path,
             headers: Headers::new(),
+            body: HttpBody::Empty,
         })
     }
 
@@ -88,8 +100,16 @@ impl Request {
         &self.path
     }
 
+    pub const fn method(&self) -> &HttpMethod {
+        &self.method
+    }
+
     pub const fn headers(&self) -> &Headers {
         &self.headers
+    }
+
+    pub const fn body(&self) -> &HttpBody {
+        &self.body
     }
 }
 

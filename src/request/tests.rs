@@ -1,6 +1,7 @@
 use std::io::Cursor;
 
 use super::from_reader;
+use crate::body::HttpBody;
 
 #[test]
 fn test_from_reader_simple_get() {
@@ -10,6 +11,107 @@ fn test_from_reader_simple_get() {
     let request = from_reader(&mut reader).expect("should parse request");
 
     assert_eq!(request.path(), "/");
+}
+
+#[test]
+fn test_from_reader_with_empty_body() {
+    let raw_request = b"POST /submit HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
+    let mut reader = Cursor::new(raw_request.as_slice());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/submit");
+    assert!(matches!(request.body(), HttpBody::Empty));
+}
+
+#[test]
+fn test_from_reader_with_body() {
+    let body = b"Hello, World!";
+    let raw_request = format!(
+        "POST /submit HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",
+        body.len(),
+        std::str::from_utf8(body).unwrap()
+    );
+    let mut reader = Cursor::new(raw_request.as_bytes());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/submit");
+    match request.body() {
+        HttpBody::Content(data) => assert_eq!(data, body),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+}
+
+#[test]
+fn test_from_reader_with_json_body() {
+    let body = br#"{"name": "test", "value": 123}"#;
+    let raw_request = format!(
+        "POST /api/data HTTP/1.1\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n{}",
+        body.len(),
+        std::str::from_utf8(body).unwrap()
+    );
+    let mut reader = Cursor::new(raw_request.as_bytes());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/api/data");
+    match request.body() {
+        HttpBody::Content(data) => assert_eq!(data, body),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+}
+
+#[test]
+fn test_from_reader_with_large_body() {
+    // Body larger than 1024 bytes to test chunked reading
+    let body: Vec<u8> = (0..2500).map(|i| (i % 256) as u8).collect();
+    let body_str = String::from_utf8_lossy(&body);
+    let raw_request = format!(
+        "POST /upload HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",
+        body.len(),
+        body_str
+    );
+    let mut reader = Cursor::new(raw_request.into_bytes());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/upload");
+    match request.body() {
+        HttpBody::Content(data) => assert_eq!(data.len(), 2500),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+}
+
+#[test]
+fn test_from_reader_no_content_length_header() {
+    let raw_request = b"GET /path HTTP/1.1\r\nHost: localhost\r\n\r\n";
+    let mut reader = Cursor::new(raw_request.as_slice());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/path");
+    assert!(matches!(request.body(), HttpBody::Empty));
+}
+
+#[test]
+fn test_from_reader_body_with_binary_data() {
+    let body: Vec<u8> = vec![0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD];
+    let mut raw_request = format!(
+        "POST /binary HTTP/1.1\r\nContent-Length: {}\r\n\r\n",
+        body.len()
+    )
+    .into_bytes();
+    raw_request.extend(&body);
+    let mut reader = Cursor::new(raw_request);
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.path(), "/binary");
+    match request.body() {
+        HttpBody::Content(data) => assert_eq!(data, &body),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
 }
 
 #[test]

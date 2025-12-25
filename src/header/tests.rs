@@ -352,3 +352,131 @@ fn test_set_multiple_different_headers() {
     assert_eq!(headers.get("content-type"), Some("application/json"));
     assert_eq!(headers.get("accept"), Some("text/html"));
 }
+
+// Tests for content_length() method
+#[test]
+fn test_content_length_returns_value_when_present() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "42");
+
+    assert_eq!(headers.content_length().unwrap(), 42);
+}
+
+#[test]
+fn test_content_length_returns_zero_when_absent() {
+    let headers = Headers::new();
+
+    assert_eq!(headers.content_length().unwrap(), 0);
+}
+
+#[test]
+fn test_content_length_returns_error_for_invalid_number() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "not-a-number");
+
+    assert!(headers.content_length().is_err());
+}
+
+#[test]
+fn test_content_length_returns_error_for_negative_number() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "-10");
+
+    assert!(headers.content_length().is_err());
+}
+
+#[test]
+fn test_content_length_returns_error_for_float() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "3.14");
+
+    assert!(headers.content_length().is_err());
+}
+
+#[test]
+fn test_content_length_returns_zero_for_zero() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "0");
+
+    assert_eq!(headers.content_length().unwrap(), 0);
+}
+
+#[test]
+fn test_content_length_large_value() {
+    let mut headers = Headers::new();
+    headers.add("Content-Length", "1073741824"); // 1 GB
+
+    assert_eq!(headers.content_length().unwrap(), 1073741824);
+}
+
+#[test]
+fn test_content_length_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.add("content-length", "100");
+
+    assert_eq!(headers.content_length().unwrap(), 100);
+}
+
+#[test]
+fn test_content_length_from_read() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Length: 256").unwrap();
+
+    assert_eq!(headers.content_length().unwrap(), 256);
+}
+
+#[test]
+fn test_content_length_with_whitespace() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Length:   512   ").unwrap();
+
+    assert_eq!(headers.content_length().unwrap(), 512);
+}
+
+// Tests for content_type() method
+#[test]
+fn test_content_type_returns_value_when_present() {
+    let mut headers = Headers::new();
+    headers.add("Content-Type", "application/json");
+
+    assert_eq!(headers.content_type(), Some("application/json"));
+}
+
+#[test]
+fn test_content_type_returns_none_when_absent() {
+    let headers = Headers::new();
+
+    assert_eq!(headers.content_type(), None);
+}
+
+#[test]
+fn test_content_type_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.add("content-type", "text/html");
+
+    assert_eq!(headers.content_type(), Some("text/html"));
+}
+
+#[test]
+fn test_content_type_from_read() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Type: text/plain").unwrap();
+
+    assert_eq!(headers.content_type(), Some("text/plain"));
+}
+
+#[test]
+fn test_content_type_with_charset() {
+    let mut headers = Headers::new();
+    headers.add("Content-Type", "text/html; charset=utf-8");
+
+    assert_eq!(headers.content_type(), Some("text/html; charset=utf-8"));
+}
+
+#[test]
+fn test_content_type_with_whitespace() {
+    let mut headers = Headers::new();
+    headers.read(b"Content-Type:   application/xml   ").unwrap();
+
+    assert_eq!(headers.content_type(), Some("application/xml"));
+}

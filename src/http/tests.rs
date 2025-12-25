@@ -166,8 +166,18 @@ fn test_status_debug() {
 }
 
 #[test]
+fn test_status_no_content_write_status_line() {
+    let mut buffer = Vec::new();
+    HttpStatus::NoContent
+        .write_status_line(&mut buffer)
+        .unwrap();
+    assert_eq!(buffer, b"HTTP/1.1 204 No Content\r\n");
+}
+
+#[test]
 fn test_status_enum_values() {
     assert_eq!(HttpStatus::Ok as u16, 200);
+    assert_eq!(HttpStatus::NoContent as u16, 204);
     assert_eq!(HttpStatus::BadRequest as u16, 400);
     assert_eq!(HttpStatus::Unauthorized as u16, 401);
     assert_eq!(HttpStatus::Forbidden as u16, 403);
