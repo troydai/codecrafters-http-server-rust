@@ -10,17 +10,14 @@ use crate::http::method::HttpMethod;
 
 #[derive(Debug)]
 pub struct Request {
-    method: Option<HttpMethod>,
-    path: Option<String>,
+    #[allow(dead_code)]
+    method: HttpMethod,
+    path: String,
     headers: Headers,
 }
 
 pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
-    let mut req = Request {
-        headers: Headers::new(),
-        method: None,
-        path: None,
-    };
+    let mut req: Option<Request> = None;
 
     let mut current_line: Vec<u8> = Vec::new();
 
@@ -44,7 +41,13 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
                     break 'parent;
                 }
 
-                req.fill(&current_line)?;
+                match req {
+                    None => req = Some(Request::from_request_line(&current_line)?),
+                    Some(ref mut r) => {
+                        r.headers.read(&current_line)?;
+                    }
+                }
+
                 current_line.clear();
 
                 start = end + 2;
@@ -57,52 +60,32 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
         }
     }
 
-    Ok(req)
+    req.ok_or_else(|| anyhow!("failed to create request from input"))
 }
 
 impl Request {
-    /// fill allows the client to gradually build up a HTTP request line
-    /// by line. This method is desgined to be called by a reader of the
-    /// `TcpStream`. In each call, a slice of bytes represents a line ends
-    /// by CRLF. The first call to this function is expected to give it
-    /// the request line. After that each call represent a header.
-    fn fill(&mut self, bytes: &[u8]) -> Result<()> {
-        if self.path.is_none() {
-            // expect this bytes slice represents the request line
-            let rl = RequestLine::from_bytes(bytes)?;
-            self.method = Some(rl.method.parse()?);
-            self.path = Some(String::from(rl.path));
-        } else {
-            // the request is already initialized. each of the remaining calls
-            // represent a line of headers
-            self.headers.read(bytes)?;
-        }
+    fn from_request_line(bytes: &[u8]) -> Result<Self> {
+        let rl = RequestLine::from_bytes(bytes)?;
+        let method = rl.method.parse()?;
+        let path = String::from(rl.path);
 
-        Ok(())
+        Ok(Self {
+            method,
+            path,
+            headers: Headers::new(),
+        })
     }
 
     pub fn path_match_exact(&self, pattern: &str) -> bool {
-        if let Some(p) = self.path.as_ref() {
-            return pattern == p;
-        }
-
-        false
+        pattern == self.path
     }
 
     pub fn path_match_prefix(&self, pattern: &str) -> bool {
-        if let Some(p) = self.path.as_ref() {
-            return p.starts_with(pattern);
-        }
-
-        false
+        self.path.starts_with(pattern)
     }
 
-    pub fn path(&self) -> Result<&str> {
-        if let Some(p) = self.path.as_ref() {
-            return Ok(p);
-        }
-
-        Err(anyhow!("request is not initialized"))
+    pub fn path(&self) -> &str {
+        &self.path
     }
 
     pub const fn headers(&self) -> &Headers {
