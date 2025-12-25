@@ -21,7 +21,7 @@ impl Router {
         }
 
         if req.path_match_prefix("/echo/") {
-            let message = &req.path()?[6..];
+            let message = &req.path()[6..];
             let mut resp = response::ok();
             resp.set_str_body(message);
             return Ok(resp);
@@ -39,7 +39,7 @@ impl Router {
         }
 
         if req.path_match_prefix("/files") {
-            let path = &req.path()?[7..];
+            let path = &req.path()[7..];
             if path.contains("..") || path.starts_with('/') {
                 return Ok(response::Response::new(HttpStatus::Forbidden));
             }
