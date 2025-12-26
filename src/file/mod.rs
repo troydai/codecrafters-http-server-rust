@@ -25,6 +25,27 @@ impl fmt::Display for FileRetrieverError {
 
 impl std::error::Error for FileRetrieverError {}
 
+pub trait FileSaver {
+    fn save(&self, path: &str, content: &[u8]) -> Result<(), FileSaverError>;
+}
+
+#[derive(Debug)]
+pub enum FileSaverError {
+    InvalidPath(String),
+    Other(String),
+}
+
+impl fmt::Display for FileSaverError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InvalidPath(msg) => write!(f, "invalid path: {msg}"),
+            Self::Other(msg) => write!(f, "file saver error: {msg}"),
+        }
+    }
+}
+
+impl std::error::Error for FileSaverError {}
+
 struct LocalFileSystem {
     root: PathBuf,
 }
@@ -47,13 +68,43 @@ impl FileRetriever for LocalFileSystem {
     }
 }
 
+impl FileSaver for LocalFileSystem {
+    fn save(&self, path: &str, content: &[u8]) -> Result<(), FileSaverError> {
+        if path.contains("..") {
+            return Err(FileSaverError::InvalidPath(
+                "path contains '..' which is disallowed".to_string(),
+            ));
+        }
+
+        let mut full_path = self.root.clone();
+        full_path.push(path);
+
+        std::fs::write(&full_path, content).map_err(|e| {
+            FileSaverError::Other(format!(
+                "failed to write file at {}: {e}",
+                full_path.display()
+            ))
+        })
+    }
+}
+
 impl FileRetriever for Dummy {
     fn retrieve(&self, _path: &str) -> Result<Vec<u8>, FileRetrieverError> {
         Err(FileRetrieverError::Other(String::from("not implemented")))
     }
 }
 
-pub fn create(input: Option<String>) -> anyhow::Result<Box<dyn FileRetriever + Send + Sync>> {
+impl FileSaver for Dummy {
+    fn save(&self, _path: &str, _content: &[u8]) -> Result<(), FileSaverError> {
+        Err(FileSaverError::Other(String::from("not implemented")))
+    }
+}
+
+pub trait FileSystem: FileRetriever + FileSaver {}
+
+impl<T: FileRetriever + FileSaver> FileSystem for T {}
+
+pub fn create(input: Option<String>) -> anyhow::Result<Box<dyn FileSystem + Send + Sync>> {
     if let Some(path) = input {
         let root = validate_path(&path)?;
         return Ok(Box::new(LocalFileSystem { root }));

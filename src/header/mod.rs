@@ -90,6 +90,27 @@ impl Headers {
 
         Err(anyhow!("invalid header bytes"))
     }
+
+    /// returns the value of Content-Length header in usize type.
+    /// - if the header is missing, returns zero.
+    /// - if the header is not missing but it can't be correctly parsed
+    ///   into usize, error is returned.
+    pub fn content_length(&self) -> Result<usize> {
+        self.get(consts::HEADER_CONTENT_LENGTH).map_or_else(
+            || Ok(0),
+            |header| {
+                header
+                    .parse::<usize>()
+                    .map_err(|_e| anyhow!("failed to parse Content-Length"))
+            },
+        )
+    }
+
+    /// returns the value of Content-Type header as &str.
+    /// returns None if the header is not present.
+    pub fn content_type(&self) -> Option<&str> {
+        self.get(consts::HEADER_CONTENT_TYPE)
+    }
 }
 
 fn wire_format(name: &String, values: &[String]) -> Vec<u8> {
