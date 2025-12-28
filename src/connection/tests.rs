@@ -45,7 +45,7 @@ fn test_read_line_with_special_characters() {
 #[test]
 fn test_read_line_larger_than_buffer() {
     // Create a line larger than the 1024 byte buffer
-    let mut large_content: Vec<u8> = (0..2000).map(|i| b'a' + (i % 26) as u8).collect();
+    let mut large_content: Vec<u8> = (0_u32..2000).map(|i| b'a' + (i % 26) as u8).collect();
     large_content.extend_from_slice(b"\r\n");
 
     let mut stream = Cursor::new(large_content.clone());
@@ -187,7 +187,7 @@ fn test_read_split_crlf() {
 
 #[test]
 fn test_read_bytes_larger_than_buffer() {
-    let mut large_content: Vec<u8> = (0..2000).map(|i| (i % 255) as u8).collect();
+    let large_content: Vec<u8> = (0_u32..2000).map(|i| (i % 255) as u8).collect();
     let mut stream = Cursor::new(large_content.clone());
     let mut line_stream = LineStream::new(&mut stream);
 
@@ -197,7 +197,7 @@ fn test_read_bytes_larger_than_buffer() {
 
 #[test]
 fn test_read_bytes_exact_buffer_size() {
-    let mut content: Vec<u8> = (0..1024).map(|i| (i % 255) as u8).collect();
+    let content: Vec<u8> = (0_u32..1024).map(|i| (i % 255) as u8).collect();
     let mut stream = Cursor::new(content.clone());
     let mut line_stream = LineStream::new(&mut stream);
 
@@ -218,17 +218,12 @@ fn test_read_bytes_split_buffers() {
     let line = b"Line\r\n";
     let body_part1 = b"BodyPart1"; // 9 bytes
     let body_part2 = b"BodyPart2"; // 9 bytes
-    
-    let mut data = Vec::new();
-    data.extend_from_slice(line);
-    data.extend_from_slice(body_part1);
-    data.extend_from_slice(body_part2);
-    
+
     // We want `read_line` to pull everything into its internal buffer (if small enough)
     // or at least pull `body_part1` into `stream_buffer`.
     // To ensure `body_part1` is in `stream_buffer` but `body_part2` is NOT (to test reading from stream),
     // we need to construct a MockReader that delivers chunks.
-    
+
     let chunks = vec![
         // Chunk 1: Line + BodyPart1. 
         // read_line will consume Line. BodyPart1 stays in stream_buffer.

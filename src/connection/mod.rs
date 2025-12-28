@@ -134,7 +134,7 @@ where
     }
 }
 
-impl<'a, T> std::io::Write for LineStream<'a, T>
+impl<T> std::io::Write for LineStream<'_, T>
 where
     T: std::io::Read + std::io::Write,
 {

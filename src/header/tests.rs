@@ -406,7 +406,7 @@ fn test_content_length_large_value() {
     let mut headers = Headers::new();
     headers.add("Content-Length", "1073741824"); // 1 GB
 
-    assert_eq!(headers.content_length().unwrap(), 1073741824);
+    assert_eq!(headers.content_length().unwrap(), 1_073_741_824);
 }
 
 #[test]

@@ -81,6 +81,7 @@ pub fn from_line_stream<T: Read>(ls: &mut LineStream<T>) -> Result<Request> {
 ///
 /// * `Ok(Request)` - Successfully parsed HTTP request
 /// * `Err(_)` - If the request is malformed or an I/O error occurs
+#[allow(dead_code)]
 pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
     let mut ls = LineStream::new(stream);
     from_line_stream(&mut ls)

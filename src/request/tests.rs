@@ -66,7 +66,8 @@ fn test_from_reader_with_json_body() {
 #[test]
 fn test_from_reader_with_large_body() {
     // Body larger than 1024 bytes to test chunked reading
-    let body: Vec<u8> = (0..2500).map(|i| (i % 256) as u8).collect();
+    #[allow(clippy::cast_possible_truncation)]
+    let body: Vec<u8> = (0_u32..2500).map(|i| (i % 256) as u8).collect();
     let body_str = String::from_utf8_lossy(&body);
     let raw_request = format!(
         "POST /upload HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",

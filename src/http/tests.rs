@@ -103,7 +103,7 @@ fn test_method_clone() {
 #[test]
 fn test_method_debug() {
     let method = HttpMethod::Get;
-    let debug_str = format!("{:?}", method);
+    let debug_str = format!("{method:?}");
     assert_eq!(debug_str, "Get");
 }
 
