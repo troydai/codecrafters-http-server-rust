@@ -79,16 +79,21 @@ impl Headers {
     /// in the HTTP request and return the name-value pair. it returns error
     /// if the input is not a valid HTTP header.
     pub fn read(&mut self, bytes: &[u8]) -> Result<()> {
-        let s = std::str::from_utf8(bytes)?;
-        if let Some(idx) = s.find(':') {
-            let name = std::str::from_utf8(&bytes[..idx])?.trim().to_lowercase();
-            let value = std::str::from_utf8(&bytes[idx + 1..])?.trim();
+        let (name, value) = std::str::from_utf8(bytes)?
+            .split_once(':')
+            .ok_or_else(|| anyhow!("invalid header bytes"))?;
 
-            self.add(&name, value);
-            return Ok(());
+        let name = name.trim().to_lowercase();
+        let value = value.trim();
+
+        match name {
+            n if n == consts::HEADER_ACCEPT_ENCODING.to_lowercase() => {
+                self.set_accept_encoding(value);
+            }
+            _ => self.add(&name, value),
         }
 
-        Err(anyhow!("invalid header bytes"))
+        Ok(())
     }
 
     /// returns the value of Content-Length header in usize type.
@@ -118,10 +123,22 @@ impl Headers {
         self.get(consts::HEADER_CONNECTION)
     }
 
-    /// returns the value of Accept-Encoding header as &str.
+    /// returns the value of Accept-Encoding header as Option<Vec<String>>.
     /// returns None if the header is not present.
-    pub fn accept_encoding(&self) -> Option<&str> {
-        self.get(consts::HEADER_ACCEPT_ENCODING)
+    pub fn accept_encodings(&self) -> Option<Vec<String>> {
+        self.headers
+            .get(&consts::HEADER_ACCEPT_ENCODING.to_lowercase())
+            .cloned()
+    }
+
+    /// sets the Accept-Encoding header. the value is expected to be a
+    /// comma-separated string of encodings.
+    pub fn set_accept_encoding(&mut self, value: &str) {
+        let name = consts::HEADER_ACCEPT_ENCODING.to_lowercase();
+        self.headers.remove(&name);
+        for v in value.split(',') {
+            self.add(&name, v.trim());
+        }
     }
 
     /// Sets the Content-Length header to the given value.

@@ -355,20 +355,20 @@ fn test_set_multiple_different_headers() {
     assert_eq!(headers.get("accept"), Some("text/html"));
 }
 
-// Tests for accept_encoding() method
+// Tests for accept_encodings() method
 #[test]
 fn test_accept_encoding_returns_value_when_present() {
     let mut headers = Headers::new();
     headers.add("Accept-Encoding", "gzip");
 
-    assert_eq!(headers.accept_encoding(), Some("gzip"));
+    assert_eq!(headers.accept_encodings().unwrap(), vec!["gzip".to_string()]);
 }
 
 #[test]
 fn test_accept_encoding_returns_none_when_absent() {
     let headers = Headers::new();
 
-    assert_eq!(headers.accept_encoding(), None);
+    assert!(headers.accept_encodings().is_none());
 }
 
 #[test]
@@ -376,7 +376,7 @@ fn test_accept_encoding_case_insensitive() {
     let mut headers = Headers::new();
     headers.add("ACCEPT-ENCODING", "gzip");
 
-    assert_eq!(headers.accept_encoding(), Some("gzip"));
+    assert_eq!(headers.accept_encodings().unwrap(), vec!["gzip".to_string()]);
 }
 
 #[test]
@@ -384,7 +384,7 @@ fn test_accept_encoding_from_read() {
     let mut headers = Headers::new();
     headers.read(b"Accept-Encoding: deflate").unwrap();
 
-    assert_eq!(headers.accept_encoding(), Some("deflate"));
+    assert_eq!(headers.accept_encodings().unwrap(), vec!["deflate".to_string()]);
 }
 
 #[test]
@@ -392,7 +392,43 @@ fn test_accept_encoding_with_multiple_values() {
     let mut headers = Headers::new();
     headers.read(b"Accept-Encoding: gzip, deflate, br").unwrap();
 
-    assert_eq!(headers.accept_encoding(), Some("gzip, deflate, br"));
+    assert_eq!(
+        headers.accept_encodings().unwrap(),
+        vec![
+            "gzip".to_string(),
+            "deflate".to_string(),
+            "br".to_string()
+        ]
+    );
+}
+
+#[test]
+fn test_accept_encoding_multiple_values_split_into_vector() {
+    let mut headers = Headers::new();
+    headers
+        .read(b"Accept-Encoding: option1, gzip, option2")
+        .unwrap();
+
+    let values = headers.accept_encodings().unwrap();
+    assert_eq!(
+        values,
+        vec![
+            "option1".to_string(),
+            "gzip".to_string(),
+            "option2".to_string()
+        ]
+    );
+}
+
+#[test]
+fn test_other_headers_not_split_by_comma() {
+    let mut headers = Headers::new();
+    // User-Agent often contains commas or other delimiters but should not be split
+    headers
+        .read(b"User-Agent: Mozilla/5.0, Chrome/91.0")
+        .unwrap();
+
+    assert_eq!(headers.get("User-Agent"), Some("Mozilla/5.0, Chrome/91.0"));
 }
 
 // Tests for content_length() method
