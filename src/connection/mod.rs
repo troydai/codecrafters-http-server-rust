@@ -115,10 +115,10 @@ where
         if remaining_in_stream_buf > 0 {
             let needed = count - retval.len();
             let to_take = std::cmp::min(needed, remaining_in_stream_buf);
-            
+
             retval.extend_from_slice(&self.stream_buffer[self.stream_buffer_start..self.stream_buffer_start + to_take]);
             self.stream_buffer_start += to_take;
-            
+
             if retval.len() == count {
                 return Ok(retval);
             }
@@ -127,10 +127,23 @@ where
         // 3. Read directly from stream for the rest
         // Extend retval with zeroes to accommodate the read_exact
         let current_len = retval.len();
-        retval.resize(count, 0); 
+        retval.resize(count, 0);
         self.stream.read_exact(&mut retval[current_len..])?;
 
         Ok(retval)
+    }
+}
+
+impl<T> std::io::Write for LineStream<'_, T>
+where
+    T: std::io::Read + std::io::Write,
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.stream.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.stream.flush()
     }
 }
 

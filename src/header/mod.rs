@@ -111,6 +111,12 @@ impl Headers {
     pub fn content_type(&self) -> Option<&str> {
         self.get(consts::HEADER_CONTENT_TYPE)
     }
+
+    /// returns the value of Connection header as &str.
+    /// returns None if the header is not present.
+    pub fn connection(&self) -> Option<&str> {
+        self.get(consts::HEADER_CONNECTION)
+    }
 }
 
 fn wire_format(name: &String, values: &[String]) -> Vec<u8> {

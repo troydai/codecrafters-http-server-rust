@@ -40,6 +40,12 @@ impl Response {
         self.status.write_status_line(stream)?;
         self.headers.write(stream)?;
 
+        // For HTTP/1.1 persistent connections, responses without a body must
+        // include Content-Length: 0 so clients know the response is complete
+        if self.body.is_none() {
+            stream.write_all(b"Content-Length: 0\r\n")?;
+        }
+
         // empty line to separate body from headers
         stream.write_all(CRLF)?;
         if let Some(body) = &self.body {

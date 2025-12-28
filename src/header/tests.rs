@@ -406,7 +406,7 @@ fn test_content_length_large_value() {
     let mut headers = Headers::new();
     headers.add("Content-Length", "1073741824"); // 1 GB
 
-    assert_eq!(headers.content_length().unwrap(), 1073741824);
+    assert_eq!(headers.content_length().unwrap(), 1_073_741_824);
 }
 
 #[test]
@@ -479,4 +479,43 @@ fn test_content_type_with_whitespace() {
     headers.read(b"Content-Type:   application/xml   ").unwrap();
 
     assert_eq!(headers.content_type(), Some("application/xml"));
+}
+
+#[test]
+fn test_connection_returns_value_when_present() {
+    let mut headers = Headers::new();
+    headers.add("Connection", "keep-alive");
+
+    assert_eq!(headers.connection(), Some("keep-alive"));
+}
+
+#[test]
+fn test_connection_returns_none_when_absent() {
+    let headers = Headers::new();
+
+    assert_eq!(headers.connection(), None);
+}
+
+#[test]
+fn test_connection_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.add("CONNECTION", "close");
+
+    assert_eq!(headers.connection(), Some("close"));
+}
+
+#[test]
+fn test_connection_from_read() {
+    let mut headers = Headers::new();
+    headers.read(b"Connection: close").unwrap();
+
+    assert_eq!(headers.connection(), Some("close"));
+}
+
+#[test]
+fn test_connection_with_whitespace() {
+    let mut headers = Headers::new();
+    headers.read(b"Connection:   keep-alive   ").unwrap();
+
+    assert_eq!(headers.connection(), Some("keep-alive"));
 }
