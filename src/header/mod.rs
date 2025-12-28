@@ -111,6 +111,14 @@ impl Headers {
     pub fn content_type(&self) -> Option<&str> {
         self.get(consts::HEADER_CONTENT_TYPE)
     }
+
+    /// checks if the Connection header is set to "close".
+    /// returns true if the header is present and set to "close",
+    /// false otherwise.
+    pub fn is_connection_close(&self) -> bool {
+        self.get(consts::HEADER_CONNECTION)
+            .map_or(false, |v| v.eq_ignore_ascii_case("close"))
+    }
 }
 
 fn wire_format(name: &String, values: &[String]) -> Vec<u8> {

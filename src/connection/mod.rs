@@ -115,10 +115,10 @@ where
         if remaining_in_stream_buf > 0 {
             let needed = count - retval.len();
             let to_take = std::cmp::min(needed, remaining_in_stream_buf);
-            
+
             retval.extend_from_slice(&self.stream_buffer[self.stream_buffer_start..self.stream_buffer_start + to_take]);
             self.stream_buffer_start += to_take;
-            
+
             if retval.len() == count {
                 return Ok(retval);
             }
@@ -127,10 +127,18 @@ where
         // 3. Read directly from stream for the rest
         // Extend retval with zeroes to accommodate the read_exact
         let current_len = retval.len();
-        retval.resize(count, 0); 
+        retval.resize(count, 0);
         self.stream.read_exact(&mut retval[current_len..])?;
 
         Ok(retval)
+    }
+
+    /// Returns a mutable reference to the underlying stream.
+    ///
+    /// This allows writing to the stream while preserving the LineStream's
+    /// internal buffer state, which is necessary for HTTP keep-alive connections.
+    pub fn get_stream_mut(&mut self) -> &mut T {
+        self.stream
     }
 }
 

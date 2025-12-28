@@ -2,6 +2,7 @@
  * This module defines a HttpServer that handles connection.
  */
 
+use crate::connection::LineStream;
 use crate::request;
 use crate::router::Router;
 use anyhow::Result;
@@ -33,9 +34,31 @@ impl HttpServer {
     }
 
     fn handle_connection(router: &Arc<Router>, mut stream: TcpStream) -> Result<()> {
-        let req = request::from_reader(&mut stream)?;
-        let resp = router.handle(&req)?;
-        resp.write(&mut stream)?;
+        let mut line_stream = LineStream::new(&mut stream);
+
+        loop {
+            // Try to read the next request
+            let req = match request::from_line_stream(&mut line_stream) {
+                Ok(req) => req,
+                Err(_) => {
+                    // Client closed connection or error occurred
+                    break;
+                }
+            };
+
+            // Check if client requested connection close
+            let should_close = req.headers().is_connection_close();
+
+            // Handle the request and write response
+            let resp = router.handle(&req)?;
+            resp.write(line_stream.get_stream_mut())?;
+
+            // Close connection if requested
+            if should_close {
+                break;
+            }
+        }
+
         Ok(())
     }
 }

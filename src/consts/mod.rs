@@ -8,3 +8,4 @@ pub const STR_HTTP_1_1: &str = "HTTP/1.1";
 pub const HEADER_USER_AGENT: &str = "User-Agent";
 pub const HEADER_CONTENT_LENGTH: &str = "Content-Length";
 pub const HEADER_CONTENT_TYPE: &str = "Content-Type";
+pub const HEADER_CONNECTION: &str = "Connection";
