@@ -37,11 +37,6 @@ impl Response {
         self.body = HttpBody::Content(Vec::from(body));
     }
 
-    /// Returns a reference to the response headers.
-    pub const fn headers(&self) -> &Headers {
-        &self.headers
-    }
-
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
 
