@@ -319,3 +319,30 @@ fn test_set_header_overwrites_default() {
     assert!(output.to_lowercase().contains("connection: close"));
     assert!(!output.to_lowercase().contains("connection: keep-alive"));
 }
+
+#[test]
+fn test_set_encoding_sets_header() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    resp.set_encoding("gzip");
+
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+    let output = String::from_utf8(buffer).unwrap();
+
+    // Check that Content-Encoding: gzip is present (case insensitive check because of Headers implementation)
+    assert!(output.to_lowercase().contains("content-encoding: gzip"));
+}
+
+#[test]
+fn test_set_encoding_overwrites_existing() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    resp.set_encoding("deflate");
+    resp.set_encoding("gzip");
+
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+    let output = String::from_utf8(buffer).unwrap();
+
+    assert!(output.to_lowercase().contains("content-encoding: gzip"));
+    assert!(!output.to_lowercase().contains("content-encoding: deflate"));
+}
