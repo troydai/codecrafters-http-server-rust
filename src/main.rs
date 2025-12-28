@@ -1,4 +1,5 @@
 mod body;
+mod connection;
 mod consts;
 mod file;
 mod header;

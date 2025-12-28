@@ -126,3 +126,54 @@ fn test_from_reader_simple_get_long_path() {
         "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     );
 }
+
+struct MockReader {
+    chunks: Vec<Vec<u8>>,
+    current_chunk: usize,
+    position_in_chunk: usize,
+}
+
+impl MockReader {
+    fn new(chunks: Vec<Vec<u8>>) -> Self {
+        Self {
+            chunks,
+            current_chunk: 0,
+            position_in_chunk: 0,
+        }
+    }
+}
+
+impl std::io::Read for MockReader {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        if self.current_chunk >= self.chunks.len() {
+            return Ok(0);
+        }
+        
+        let chunk = &self.chunks[self.current_chunk];
+        let remaining = chunk.len() - self.position_in_chunk;
+        
+        let to_copy = std::cmp::min(remaining, buf.len());
+        buf[..to_copy].copy_from_slice(&chunk[self.position_in_chunk..self.position_in_chunk+to_copy]);
+        
+        self.position_in_chunk += to_copy;
+        if self.position_in_chunk >= chunk.len() {
+            self.current_chunk += 1;
+            self.position_in_chunk = 0;
+        }
+        
+        Ok(to_copy)
+    }
+}
+
+#[test]
+fn test_from_reader_split_crlf() {
+    // \r is at the end of first chunk, \n is at the start of second chunk
+    let chunks = vec![
+        b"GET / HTTP/1.1\r".to_vec(),
+        b"\n\r\n".to_vec(),
+    ];
+    let mut reader = MockReader::new(chunks);
+
+    let request = from_reader(&mut reader).expect("should parse request");
+    assert_eq!(request.path(), "/");
+}
