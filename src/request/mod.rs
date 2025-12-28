@@ -5,7 +5,8 @@ use anyhow::{Result, anyhow};
 use std::io::Read;
 
 use crate::body::HttpBody;
-use crate::consts::{self, CRLF};
+use crate::connection::LineStream;
+use crate::consts;
 use crate::header::Headers;
 use crate::http::method::HttpMethod;
 
@@ -18,48 +19,23 @@ pub struct Request {
     body: HttpBody,
 }
 
-pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
+pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
     let mut req: Option<Request> = None;
-    let mut current_line: Vec<u8> = Vec::new();
-    let mut left_over: Vec<u8> = Vec::new();
+    let mut ls = LineStream::new(stream);
 
-    'parent: loop {
-        let mut buf = [0; 1024];
-        let size = reader.read(&mut buf)?;
+    loop {
+        let current_line = ls.read_line()?;
 
-        let mut start: usize = 0;
-        loop {
-            if let Some(end) = buf[start..size]
-                .windows(2)
-                .position(|w| w == CRLF)
-                .map(|p| p + start)
-            {
-                // found a CRLF from starting position, append it to the current line
-                // the current line may ore may not be empty.
-                current_line.extend_from_slice(&buf[start..end]);
+        // end of the headers, push the remaining bytes in the buffer to the left_over
+        // in case they're part of the request body
+        if current_line.is_empty() {
+            break;
+        }
 
-                // end of the headers, push the remaining bytes in the buffer to the left_over
-                // in case they're part of the request body
-                if current_line.is_empty() {
-                    left_over.extend_from_slice(&buf[end + 2..size]);
-                    break 'parent;
-                }
-
-                match req {
-                    None => req = Some(Request::from_request_line(&current_line)?),
-                    Some(ref mut r) => {
-                        r.headers.read(&current_line)?;
-                    }
-                }
-
-                current_line.clear();
-
-                start = end + 2;
-            } else {
-                // CRLF is not found. remembers the remaining bytes
-                // and read another batch of bytes from the stream
-                current_line.extend(buf[start..size].iter());
-                break;
+        match req {
+            None => req = Some(Request::from_request_line(&current_line)?),
+            Some(ref mut r) => {
+                r.headers.read(&current_line)?;
             }
         }
     }
@@ -68,7 +44,11 @@ pub fn from_reader(reader: &mut impl Read) -> Result<Request> {
         || Err(anyhow!("unable to parse the request")),
         |mut req| {
             let content_length = req.headers.content_length()?;
-            req.body = HttpBody::read(Some(&left_over), content_length, reader)?;
+            if content_length != 0 {
+                let body = ls.read_bytes(content_length)?;
+                req.body = HttpBody::Content(body);
+            }
+
             Ok(req)
         },
     )
