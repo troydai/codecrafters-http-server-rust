@@ -16,14 +16,10 @@ pub struct Response {
 
 impl Response {
     pub fn new(status: HttpStatus) -> Self {
-        let mut headers = Headers::new();
-        // Initialize Content-Length: 0 so headers are always stored in the struct,
-        // not created on-the-fly during write().
-        headers.set_content_length(0);
-
+        // Headers::new() initializes with Content-Length: 0 by default
         Self {
             status,
-            headers,
+            headers: Headers::new(),
             body: None,
         }
     }
