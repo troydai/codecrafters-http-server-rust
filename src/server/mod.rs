@@ -61,7 +61,7 @@ impl HttpServer {
                 .accept_encodings()
                 .is_some_and(|values| values.iter().any(|v| v == "gzip"))
             {
-                resp.set_encoding("gzip");
+                resp.compress("gzip")?;
             }
 
             // set the connection management headers

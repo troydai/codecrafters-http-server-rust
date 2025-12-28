@@ -346,3 +346,40 @@ fn test_set_encoding_overwrites_existing() {
     assert!(output.to_lowercase().contains("content-encoding: gzip"));
     assert!(!output.to_lowercase().contains("content-encoding: deflate"));
 }
+
+#[test]
+fn test_gzip_compression() {
+    use flate2::read::GzDecoder;
+    use std::io::Read;
+
+    let mut resp = Response::new(HttpStatus::Ok);
+    let original_body = "Hello, world! This is a test string to be compressed.";
+    resp.set_str_body(original_body);
+
+    // Call the compression method
+    resp.compress("gzip").unwrap();
+
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+    let output = String::from_utf8_lossy(&buffer);
+
+    // Verify headers
+    assert!(output.contains("Content-Encoding: gzip\r\n") || output.contains("content-encoding: gzip\r\n"));
+
+    // Extract body and decompress it
+    // Find where the body starts (after \r\n\r\n)
+    let body_start = buffer.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4;
+    let compressed_bytes = &buffer[body_start..];
+
+    let mut decoder = GzDecoder::new(compressed_bytes);
+    let mut decompressed_body = String::new();
+    decoder.read_to_string(&mut decompressed_body).unwrap();
+    assert_eq!(decompressed_body, original_body);
+
+    // Verify Content-Length is updated to compressed size
+    let expected_len = compressed_bytes.len();
+    assert!(
+        output.contains(&format!("Content-Length: {expected_len}\r\n")) || 
+        output.contains(&format!("content-length: {expected_len}\r\n"))
+    );
+}

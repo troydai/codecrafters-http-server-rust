@@ -6,6 +6,8 @@ use crate::consts::{CRLF, HEADER_CONNECTION, HEADER_CONTENT_ENCODING};
 use crate::header::Headers;
 use crate::http::status::HttpStatus;
 use anyhow::Result;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use std::io::Write;
 
 #[derive(Debug)]
@@ -46,6 +48,18 @@ impl Response {
 
     pub fn set_encoding(&mut self, encoding: &str) {
         self.headers.set(HEADER_CONTENT_ENCODING, encoding);
+    }
+
+    pub fn compress(&mut self, encoding: &str) -> Result<()> {
+        if encoding == "gzip" && let HttpBody::Content(bytes) = &self.body {
+            let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+            encoder.write_all(bytes)?;
+            let compressed_bytes = encoder.finish()?;
+            self.set_encoding("gzip");
+            self.body = HttpBody::Content(compressed_bytes);
+            self.headers.set_content_length(self.body.len());
+        }
+        Ok(())
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
