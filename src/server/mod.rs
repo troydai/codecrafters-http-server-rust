@@ -51,7 +51,7 @@ impl HttpServer {
 
             // Handle the request and write response
             let resp = router.handle(&req)?;
-            resp.write(line_stream.get_stream_mut())?;
+            resp.write(&mut line_stream)?;
 
             // Close connection if requested
             if should_close {

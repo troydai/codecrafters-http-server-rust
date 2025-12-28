@@ -132,13 +132,18 @@ where
 
         Ok(retval)
     }
+}
 
-    /// Returns a mutable reference to the underlying stream.
-    ///
-    /// This allows writing to the stream while preserving the LineStream's
-    /// internal buffer state, which is necessary for HTTP keep-alive connections.
-    pub fn get_stream_mut(&mut self) -> &mut T {
-        self.stream
+impl<'a, T> std::io::Write for LineStream<'a, T>
+where
+    T: std::io::Read + std::io::Write,
+{
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.stream.write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.stream.flush()
     }
 }
 
