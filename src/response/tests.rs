@@ -84,7 +84,8 @@ fn test_write_format_without_body() {
     resp.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert_eq!(output, "HTTP/1.1 404 Not Found\r\n\r\n");
+    // Responses without body must include Content-Length: 0 for HTTP/1.1 persistent connections
+    assert_eq!(output, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
 }
 
 // Tests for factory functions
