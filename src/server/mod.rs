@@ -2,9 +2,6 @@
  * This module defines a HttpServer that handles connection.
  */
 
-#[cfg(test)]
-mod tests;
-
 use crate::body::HttpBody;
 use crate::connection::LineStream;
 use crate::request;
@@ -90,13 +87,14 @@ impl HttpServer {
     }
 }
 
-fn compress_response_body(resp: &mut Response) -> Result<()> {
-    if let HttpBody::Content(bytes) = resp.body() {
+pub fn compress_response_body(resp: &mut Response) -> Result<()> {
+    if let HttpBody::Content(bytes) = &resp.body {
         let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
         encoder.write_all(bytes)?;
         let compressed_bytes = encoder.finish()?;
         resp.set_encoding("gzip");
-        resp.set_body(HttpBody::Content(compressed_bytes));
+        resp.body = HttpBody::Content(compressed_bytes);
+        resp.set_header("Content-Length", &resp.body.len().to_string());
     }
     Ok(())
 }

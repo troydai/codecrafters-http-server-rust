@@ -11,8 +11,8 @@ use std::io::Write;
 #[derive(Debug)]
 pub struct Response {
     status: HttpStatus,
-    headers: Headers,
-    body: HttpBody,
+    pub(crate) headers: Headers,
+    pub(crate) body: HttpBody,
 }
 
 impl Response {
@@ -46,24 +46,6 @@ impl Response {
 
     pub fn set_encoding(&mut self, encoding: &str) {
         self.headers.set(HEADER_CONTENT_ENCODING, encoding);
-    }
-
-    #[cfg(test)]
-    pub const fn headers(&self) -> &Headers {
-        &self.headers
-    }
-
-    pub const fn body(&self) -> &HttpBody {
-        &self.body
-    }
-
-    pub fn set_body(&mut self, body: HttpBody) {
-        if let HttpBody::Content(ref bytes) = body {
-            self.headers.set_content_length(bytes.len());
-        } else {
-            self.headers.set_content_length(0);
-        }
-        self.body = body;
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
