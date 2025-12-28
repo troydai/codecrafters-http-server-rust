@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use crate::body::HttpBody;
 use crate::consts::CRLF;
 use crate::header::Headers;
 use crate::http::status::HttpStatus;
@@ -11,7 +12,7 @@ use std::io::Write;
 pub struct Response {
     status: HttpStatus,
     headers: Headers,
-    body: Option<Vec<u8>>,
+    body: HttpBody,
 }
 
 impl Response {
@@ -20,7 +21,7 @@ impl Response {
         Self {
             status,
             headers: Headers::new(),
-            body: None,
+            body: HttpBody::Empty,
         }
     }
 
@@ -28,13 +29,13 @@ impl Response {
         let bytes = body.as_bytes();
         self.headers.set("Content-Type", "text/plain");
         self.headers.set_content_length(bytes.len());
-        self.body = Some(Vec::from(bytes));
+        self.body = HttpBody::Content(Vec::from(bytes));
     }
 
     pub fn set_bytes_body(&mut self, content_type: &str, body: &[u8]) {
         self.headers.set("Content-Type", content_type);
         self.headers.set_content_length(body.len());
-        self.body = Some(Vec::from(body));
+        self.body = HttpBody::Content(Vec::from(body));
     }
 
     /// Returns a reference to the response headers.
@@ -46,13 +47,13 @@ impl Response {
         self.status.write_status_line(stream)?;
 
         // Headers are stored in the struct with Content-Length already set:
-        // - Response::new() initializes Content-Length: 0
+        // - Headers::new() initializes Content-Length: 0
         // - set_str_body/set_bytes_body update Content-Length to body length
         self.headers.write(stream)?;
 
         // empty line to separate body from headers
         stream.write_all(CRLF)?;
-        if let Some(body) = &self.body {
+        if let HttpBody::Content(body) = &self.body {
             stream.write_all(body.as_slice())?;
         }
 
