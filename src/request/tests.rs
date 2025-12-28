@@ -304,5 +304,6 @@ fn test_from_reader_with_accept_encoding() {
 
     let request = from_reader(&mut reader).expect("should parse request");
 
-    assert_eq!(request.headers().accept_encoding(), Some("gzip, deflate"));
+    let values = request.headers().accept_encodings().unwrap();
+    assert_eq!(values, vec!["gzip".to_string(), "deflate".to_string()]);
 }

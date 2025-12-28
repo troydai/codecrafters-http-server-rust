@@ -56,7 +56,11 @@ impl HttpServer {
             let mut resp = router.handle(&req)?;
 
             // set the content encoding headers
-            if req.headers().accept_encoding().is_some_and(|f| f == "gzip") {
+            if req
+                .headers()
+                .accept_encodings()
+                .is_some_and(|values| values.iter().any(|v| v == "gzip"))
+            {
                 resp.set_encoding("gzip");
             }
 
