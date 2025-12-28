@@ -247,7 +247,7 @@ fn test_new_response_has_empty_headers() {
 
     // Headers are empty - no Content-Length stored yet
     assert!(
-        resp.headers().get("Content-Length").is_none(),
+        resp.headers.get("Content-Length").is_none(),
         "New Response should have empty headers"
     );
 }
@@ -259,7 +259,7 @@ fn test_set_str_body_updates_content_length_in_headers() {
 
     // Verify via headers() that Content-Length was updated
     assert_eq!(
-        resp.headers().content_length().unwrap(),
+        resp.headers.content_length().unwrap(),
         5,
         "Content-Length should be updated to body length"
     );
@@ -273,7 +273,7 @@ fn test_set_bytes_body_updates_content_length_in_headers() {
 
     // Verify via headers() that Content-Length was updated
     assert_eq!(
-        resp.headers().content_length().unwrap(),
+        resp.headers.content_length().unwrap(),
         body.len(),
         "Content-Length should be updated to body length"
     );
@@ -284,10 +284,9 @@ fn test_response_headers_are_owned_not_created_during_write() {
     // This test verifies that headers are stored in the struct,
     // not created on-the-fly during write()
     let resp = Response::new(HttpStatus::Ok);
-    let headers = resp.headers();
 
     // Should be able to access headers before calling write()
-    assert_eq!(headers.content_length().unwrap(), 0);
+    assert_eq!(resp.headers.content_length().unwrap(), 0);
 }
 
 #[test]
@@ -295,10 +294,10 @@ fn test_set_body_multiple_times_updates_content_length() {
     let mut resp = Response::new(HttpStatus::Ok);
 
     resp.set_str_body("short");
-    assert_eq!(resp.headers().content_length().unwrap(), 5);
+    assert_eq!(resp.headers.content_length().unwrap(), 5);
 
     resp.set_str_body("a much longer body");
-    assert_eq!(resp.headers().content_length().unwrap(), 18);
+    assert_eq!(resp.headers.content_length().unwrap(), 18);
 }
 
 #[test]
@@ -308,4 +307,15 @@ fn test_keep_alive_header_present() {
     resp.write(&mut buffer).unwrap();
     let output = String::from_utf8(buffer).unwrap();
     assert!(output.to_lowercase().contains("connection: keep-alive"));
+}
+
+#[test]
+fn test_set_header_overwrites_default() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    resp.set_header("Connection", "close");
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.to_lowercase().contains("connection: close"));
+    assert!(!output.to_lowercase().contains("connection: keep-alive"));
 }

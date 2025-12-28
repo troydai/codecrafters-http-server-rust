@@ -40,9 +40,8 @@ impl Response {
         self.body = HttpBody::Content(Vec::from(body));
     }
 
-    #[allow(dead_code)]
-    pub const fn headers(&self) -> &Headers {
-        &self.headers
+    pub fn set_header(&mut self, name: &str, value: &str) {
+        self.headers.set(name, value);
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
