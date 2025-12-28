@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::body::HttpBody;
-use crate::consts::{CRLF, HEADER_CONNECTION};
+use crate::consts::{CRLF, HEADER_CONNECTION, HEADER_CONTENT_ENCODING};
 use crate::header::Headers;
 use crate::http::status::HttpStatus;
 use anyhow::Result;
@@ -42,6 +42,10 @@ impl Response {
 
     pub fn set_header(&mut self, name: &str, value: &str) {
         self.headers.set(name, value);
+    }
+
+    pub fn set_encoding(&mut self, encoding: &str) {
+        self.headers.set(HEADER_CONTENT_ENCODING, encoding);
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {

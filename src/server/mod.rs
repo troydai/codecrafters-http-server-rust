@@ -54,6 +54,13 @@ impl HttpServer {
 
             // Handle the request and write response
             let mut resp = router.handle(&req)?;
+
+            // set the content encoding headers
+            if req.headers().accept_encoding().is_some_and(|f| f == "gzip") {
+                resp.set_encoding("gzip");
+            }
+
+            // set the connection management headers
             if should_close {
                 resp.set_header("Connection", "close");
             }
