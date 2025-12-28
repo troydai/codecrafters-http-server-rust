@@ -1,11 +1,10 @@
 use super::Headers;
 
 #[test]
-fn test_new_creates_headers_with_content_length_zero() {
+fn test_new_creates_empty_headers() {
     let headers = Headers::new();
-    // Headers::new() now initializes with Content-Length: 0 by default
-    assert_eq!(headers.get("content-length"), Some("0"));
-    // Other headers should still be absent
+    // Headers::new() creates empty headers with no defaults
+    assert!(headers.get("content-length").is_none());
     assert!(headers.get("any-header").is_none());
 }
 
@@ -119,9 +118,7 @@ fn test_write_single_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    // Headers::new() includes Content-Length: 0, so we check for both headers
-    assert!(output.contains("content-type: application/json\r\n"));
-    assert!(output.contains("content-length: 0\r\n"));
+    assert_eq!(output, "content-type: application/json\r\n");
 }
 
 #[test]
@@ -151,21 +148,19 @@ fn test_write_multiple_values_same_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    // Headers::new() includes Content-Length: 0, so we check for both headers
-    assert!(output.contains("accept: text/html, application/json, application/xml\r\n"));
-    assert!(output.contains("content-length: 0\r\n"));
+    assert_eq!(output, "accept: text/html, application/json, application/xml\r\n");
 }
 
 #[test]
-fn test_write_new_headers_includes_content_length() {
+fn test_write_new_headers_is_empty() {
     let headers = Headers::new();
 
     let mut buffer = Vec::new();
     headers.write(&mut buffer).unwrap();
 
-    // Headers::new() now includes Content-Length: 0 by default
+    // Headers::new() creates empty headers
     let output = String::from_utf8(buffer).unwrap();
-    assert_eq!(output, "content-length: 0\r\n");
+    assert_eq!(output, "");
 }
 
 // Additional edge case tests for read() method
@@ -245,9 +240,7 @@ fn test_read_write_roundtrip_single_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    // Headers::new() includes Content-Length: 0, so we check for both headers
-    assert!(output.contains("content-type: application/json\r\n"));
-    assert!(output.contains("content-length: 0\r\n"));
+    assert_eq!(output, "content-type: application/json\r\n");
 }
 
 #[test]
@@ -275,9 +268,7 @@ fn test_add_write_single_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    // Headers::new() includes Content-Length: 0, so we check for both headers
-    assert!(output.contains("user-agent: Mozilla/5.0\r\n"));
-    assert!(output.contains("content-length: 0\r\n"));
+    assert_eq!(output, "user-agent: Mozilla/5.0\r\n");
 }
 
 #[test]
@@ -350,9 +341,7 @@ fn test_set_then_write() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    // Headers::new() includes Content-Length: 0, so we check for both headers
-    assert!(output.contains("content-type: application/json\r\n"));
-    assert!(output.contains("content-length: 0\r\n"));
+    assert_eq!(output, "content-type: application/json\r\n");
 }
 
 #[test]
@@ -376,8 +365,8 @@ fn test_content_length_returns_value_when_present() {
 }
 
 #[test]
-fn test_content_length_returns_zero_for_new_headers() {
-    // Headers::new() initializes with Content-Length: 0 by default
+fn test_content_length_returns_zero_when_absent() {
+    // Headers::new() creates empty headers, content_length() returns 0 when absent
     let headers = Headers::new();
 
     assert_eq!(headers.content_length().unwrap(), 0);
@@ -386,43 +375,28 @@ fn test_content_length_returns_zero_for_new_headers() {
 #[test]
 fn test_content_length_returns_error_for_invalid_number() {
     let mut headers = Headers::new();
-    // read() with an invalid Content-Length value will fall through to add()
-    // since parsing "not-a-number" as usize fails, it appends to the values list
-    // get() returns the first value which is the default "0", so we need a different approach
-    // Instead, we test via read() which properly handles the invalid value scenario
     headers.read(b"Content-Length: not-a-number").unwrap();
 
-    // The invalid value is appended after the default "0", so get() returns "0"
-    // This behavior means invalid Content-Length from read() doesn't cause an error
-    // We should test the scenario where an invalid value is the ONLY value
-    // For this test, we verify the documented behavior of the read() function
-    // When Content-Length can't be parsed, it falls through to add()
-    // This means we now have ["0", "not-a-number"], and content_length() returns Ok(0)
-    //
-    // To properly test error handling, we'd need a different test structure.
-    // For now, let's verify that parsing indeed failed by checking the string value
-    assert_eq!(headers.get("content-length"), Some("0"));
+    // Invalid Content-Length value causes content_length() to return an error
+    assert!(headers.content_length().is_err());
 }
 
 #[test]
 fn test_content_length_returns_error_for_negative_number() {
     let mut headers = Headers::new();
-    // read() with a negative Content-Length will fall through to add()
-    // since parsing "-10" as usize fails (usize is unsigned)
     headers.read(b"Content-Length: -10").unwrap();
 
-    // The default "0" is still first, so content_length() returns Ok(0)
-    assert_eq!(headers.get("content-length"), Some("0"));
+    // Negative numbers can't be parsed as usize, so content_length() returns an error
+    assert!(headers.content_length().is_err());
 }
 
 #[test]
 fn test_content_length_returns_error_for_float() {
     let mut headers = Headers::new();
-    // read() with a float Content-Length will fall through to add()
     headers.read(b"Content-Length: 3.14").unwrap();
 
-    // The default "0" is still first, so content_length() returns Ok(0)
-    assert_eq!(headers.get("content-length"), Some("0"));
+    // Floats can't be parsed as usize, so content_length() returns an error
+    assert!(headers.content_length().is_err());
 }
 
 #[test]

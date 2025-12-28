@@ -17,10 +17,11 @@ pub struct Response {
 
 impl Response {
     pub fn new(status: HttpStatus) -> Self {
-        // Headers::new() initializes with Content-Length: 0 by default
+        let mut headers = Headers::new();
+        headers.set_content_length(0);
         Self {
             status,
-            headers: Headers::new(),
+            headers,
             body: HttpBody::Empty,
         }
     }
@@ -45,10 +46,6 @@ impl Response {
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
-
-        // Headers are stored in the struct with Content-Length already set:
-        // - Headers::new() initializes Content-Length: 0
-        // - set_str_body/set_bytes_body update Content-Length to body length
         self.headers.write(stream)?;
 
         // empty line to separate body from headers

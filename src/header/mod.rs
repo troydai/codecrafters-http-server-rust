@@ -13,14 +13,9 @@ pub struct Headers {
 
 impl Headers {
     pub fn new() -> Self {
-        let mut headers = Self {
+        Self {
             headers: HashMap::new(),
-        };
-        // Initialize with Content-Length: 0 by default.
-        // This ensures HTTP/1.1 persistent connections work correctly
-        // even for responses without a body.
-        headers.set_content_length(0);
-        headers
+        }
     }
 
     pub fn add(&mut self, name: &str, value: &str) {
@@ -83,23 +78,11 @@ impl Headers {
     /// read accept a slice of bytes that represent a line of header
     /// in the HTTP request and return the name-value pair. it returns error
     /// if the input is not a valid HTTP header.
-    ///
-    /// For Content-Length headers, this uses `set_content_length()` to properly
-    /// overwrite any existing value (including the default 0 from `new()`).
     pub fn read(&mut self, bytes: &[u8]) -> Result<()> {
         let s = std::str::from_utf8(bytes)?;
         if let Some(idx) = s.find(':') {
             let name = std::str::from_utf8(&bytes[..idx])?.trim().to_lowercase();
             let value = std::str::from_utf8(&bytes[idx + 1..])?.trim();
-
-            // Content-Length should replace rather than append, since
-            // Headers::new() initializes with Content-Length: 0
-            // If parsing fails, fall through to add() which will store the
-            // invalid value and let content_length() return an error later
-            if name == "content-length" && let Ok(length) = value.parse::<usize>() {
-                self.set_content_length(length);
-                return Ok(());
-            }
 
             self.add(&name, value);
             return Ok(());
