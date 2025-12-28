@@ -480,3 +480,42 @@ fn test_content_type_with_whitespace() {
 
     assert_eq!(headers.content_type(), Some("application/xml"));
 }
+
+#[test]
+fn test_connection_returns_value_when_present() {
+    let mut headers = Headers::new();
+    headers.add("Connection", "keep-alive");
+
+    assert_eq!(headers.connection(), Some("keep-alive"));
+}
+
+#[test]
+fn test_connection_returns_none_when_absent() {
+    let headers = Headers::new();
+
+    assert_eq!(headers.connection(), None);
+}
+
+#[test]
+fn test_connection_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.add("CONNECTION", "close");
+
+    assert_eq!(headers.connection(), Some("close"));
+}
+
+#[test]
+fn test_connection_from_read() {
+    let mut headers = Headers::new();
+    headers.read(b"Connection: close").unwrap();
+
+    assert_eq!(headers.connection(), Some("close"));
+}
+
+#[test]
+fn test_connection_with_whitespace() {
+    let mut headers = Headers::new();
+    headers.read(b"Connection:   keep-alive   ").unwrap();
+
+    assert_eq!(headers.connection(), Some("keep-alive"));
+}

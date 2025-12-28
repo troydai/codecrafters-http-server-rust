@@ -37,17 +37,16 @@ impl HttpServer {
         let mut line_stream = LineStream::new(&mut stream);
 
         loop {
-            // Try to read the next request
-            let req = match request::from_line_stream(&mut line_stream) {
-                Ok(req) => req,
-                Err(_) => {
-                    // Client closed connection or error occurred
-                    break;
-                }
+            // Try to read the next request; break if client closed connection or error occurred
+            let Some(req) = request::from_line_stream(&mut line_stream).ok() else {
+                break;
             };
 
             // Check if client requested connection close
-            let should_close = req.headers().is_connection_close();
+            let should_close = req
+                .headers()
+                .connection()
+                .map_or(false, |v| v.eq_ignore_ascii_case("close"));
 
             // Handle the request and write response
             let resp = router.handle(&req)?;

@@ -112,12 +112,10 @@ impl Headers {
         self.get(consts::HEADER_CONTENT_TYPE)
     }
 
-    /// checks if the Connection header is set to "close".
-    /// returns true if the header is present and set to "close",
-    /// false otherwise.
-    pub fn is_connection_close(&self) -> bool {
+    /// returns the value of Connection header as &str.
+    /// returns None if the header is not present.
+    pub fn connection(&self) -> Option<&str> {
         self.get(consts::HEADER_CONNECTION)
-            .map_or(false, |v| v.eq_ignore_ascii_case("close"))
     }
 }
 
