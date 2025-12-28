@@ -50,8 +50,8 @@ impl Response {
         self.headers.set(HEADER_CONTENT_ENCODING, encoding);
     }
 
-    pub fn compress(&mut self) -> Result<()> {
-        if let HttpBody::Content(bytes) = &self.body {
+    pub fn compress(&mut self, encoding: &str) -> Result<()> {
+        if encoding == "gzip" && let HttpBody::Content(bytes) = &self.body {
             let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
             encoder.write_all(bytes)?;
             let compressed_bytes = encoder.finish()?;

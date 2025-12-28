@@ -357,7 +357,7 @@ fn test_gzip_compression() {
     resp.set_str_body(original_body);
 
     // Call the compression method
-    resp.compress().unwrap();
+    resp.compress("gzip").unwrap();
 
     let mut buffer = Vec::new();
     resp.write(&mut buffer).unwrap();
