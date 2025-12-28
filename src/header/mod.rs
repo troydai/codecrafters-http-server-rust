@@ -118,6 +118,12 @@ impl Headers {
         self.get(consts::HEADER_CONNECTION)
     }
 
+    /// returns the value of Accept-Encoding header as &str.
+    /// returns None if the header is not present.
+    pub fn accept_encoding(&self) -> Option<&str> {
+        self.get(consts::HEADER_ACCEPT_ENCODING)
+    }
+
     /// Sets the Content-Length header to the given value.
     /// This uses `add()` internally to ensure case-insensitive lookup works correctly.
     pub fn set_content_length(&mut self, length: usize) {

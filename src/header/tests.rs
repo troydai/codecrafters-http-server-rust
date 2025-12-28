@@ -355,6 +355,46 @@ fn test_set_multiple_different_headers() {
     assert_eq!(headers.get("accept"), Some("text/html"));
 }
 
+// Tests for accept_encoding() method
+#[test]
+fn test_accept_encoding_returns_value_when_present() {
+    let mut headers = Headers::new();
+    headers.add("Accept-Encoding", "gzip");
+
+    assert_eq!(headers.accept_encoding(), Some("gzip"));
+}
+
+#[test]
+fn test_accept_encoding_returns_none_when_absent() {
+    let headers = Headers::new();
+
+    assert_eq!(headers.accept_encoding(), None);
+}
+
+#[test]
+fn test_accept_encoding_case_insensitive() {
+    let mut headers = Headers::new();
+    headers.add("ACCEPT-ENCODING", "gzip");
+
+    assert_eq!(headers.accept_encoding(), Some("gzip"));
+}
+
+#[test]
+fn test_accept_encoding_from_read() {
+    let mut headers = Headers::new();
+    headers.read(b"Accept-Encoding: deflate").unwrap();
+
+    assert_eq!(headers.accept_encoding(), Some("deflate"));
+}
+
+#[test]
+fn test_accept_encoding_with_multiple_values() {
+    let mut headers = Headers::new();
+    headers.read(b"Accept-Encoding: gzip, deflate, br").unwrap();
+
+    assert_eq!(headers.accept_encoding(), Some("gzip, deflate, br"));
+}
+
 // Tests for content_length() method
 #[test]
 fn test_content_length_returns_value_when_present() {

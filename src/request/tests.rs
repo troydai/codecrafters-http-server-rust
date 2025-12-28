@@ -296,3 +296,13 @@ fn test_from_line_stream_pipelined_mixed_methods() {
     let req3 = from_line_stream(&mut ls).expect("should parse DELETE request");
     assert_eq!(req3.path(), "/resource");
 }
+
+#[test]
+fn test_from_reader_with_accept_encoding() {
+    let raw_request = b"GET / HTTP/1.1\r\nAccept-Encoding: gzip, deflate\r\n\r\n";
+    let mut reader = Cursor::new(raw_request.as_slice());
+
+    let request = from_reader(&mut reader).expect("should parse request");
+
+    assert_eq!(request.headers().accept_encoding(), Some("gzip, deflate"));
+}
