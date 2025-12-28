@@ -67,26 +67,6 @@ pub fn from_line_stream<T: Read>(ls: &mut LineStream<T>) -> Result<Request> {
     )
 }
 
-/// Parses an HTTP request from a reader.
-///
-/// This is a convenience wrapper around `from_line_stream` that creates
-/// a new `LineStream` for each call. For handling multiple pipelined requests
-/// on a single connection, use `from_line_stream` directly.
-///
-/// # Arguments
-///
-/// * `stream` - A mutable reference to any type implementing `Read`
-///
-/// # Returns
-///
-/// * `Ok(Request)` - Successfully parsed HTTP request
-/// * `Err(_)` - If the request is malformed or an I/O error occurs
-#[allow(dead_code)]
-pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
-    let mut ls = LineStream::new(stream);
-    from_line_stream(&mut ls)
-}
-
 impl Request {
     fn from_request_line(bytes: &[u8]) -> Result<Self> {
         let rl = RequestLine::from_bytes(bytes)?;

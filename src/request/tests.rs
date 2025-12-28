@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use super::{from_reader, from_line_stream};
+use super::from_line_stream;
 use crate::body::HttpBody;
 use crate::connection::LineStream;
 
@@ -8,8 +8,9 @@ use crate::connection::LineStream;
 fn test_from_reader_simple_get() {
     let raw_request = b"GET / HTTP/1.1\r\nContent-Type: application/json\r\n\r\n";
     let mut reader = Cursor::new(raw_request.as_slice());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/");
 }
@@ -18,8 +19,9 @@ fn test_from_reader_simple_get() {
 fn test_from_reader_with_empty_body() {
     let raw_request = b"POST /submit HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
     let mut reader = Cursor::new(raw_request.as_slice());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/submit");
     assert!(matches!(request.body(), HttpBody::Empty));
@@ -34,8 +36,9 @@ fn test_from_reader_with_body() {
         std::str::from_utf8(body).unwrap()
     );
     let mut reader = Cursor::new(raw_request.as_bytes());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/submit");
     match request.body() {
@@ -53,8 +56,9 @@ fn test_from_reader_with_json_body() {
         std::str::from_utf8(body).unwrap()
     );
     let mut reader = Cursor::new(raw_request.as_bytes());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/api/data");
     match request.body() {
@@ -75,8 +79,9 @@ fn test_from_reader_with_large_body() {
         body_str
     );
     let mut reader = Cursor::new(raw_request.into_bytes());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/upload");
     match request.body() {
@@ -89,8 +94,9 @@ fn test_from_reader_with_large_body() {
 fn test_from_reader_no_content_length_header() {
     let raw_request = b"GET /path HTTP/1.1\r\nHost: localhost\r\n\r\n";
     let mut reader = Cursor::new(raw_request.as_slice());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/path");
     assert!(matches!(request.body(), HttpBody::Empty));
@@ -106,8 +112,9 @@ fn test_from_reader_body_with_binary_data() {
     .into_bytes();
     raw_request.extend(&body);
     let mut reader = Cursor::new(raw_request);
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(request.path(), "/binary");
     match request.body() {
@@ -120,8 +127,9 @@ fn test_from_reader_body_with_binary_data() {
 fn test_from_reader_simple_get_long_path() {
     let raw_request = b"GET /aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa HTTP/1.1\r\n\r\n";
     let mut reader = Cursor::new(raw_request.as_slice());
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
 
     assert_eq!(
         request.path(),
@@ -175,8 +183,9 @@ fn test_from_reader_split_crlf() {
         b"\n\r\n".to_vec(),
     ];
     let mut reader = MockReader::new(chunks);
+    let mut line_stream = LineStream::new(&mut reader);
 
-    let request = from_reader(&mut reader).expect("should parse request");
+    let request = from_line_stream(&mut line_stream).expect("should parse request");
     assert_eq!(request.path(), "/");
 }
 

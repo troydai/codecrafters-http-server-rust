@@ -35,12 +35,12 @@ impl HttpServer {
 
     fn handle_connection(router: &Arc<Router>, mut stream: TcpStream) -> Result<()> {
         let remote_addr = &stream.peer_addr()?;
-        println!("Accepted connection from {:?}", remote_addr);
+        println!("Accepted connection from {remote_addr:?}");
 
         let mut line_stream = LineStream::new(&mut stream);
 
         loop {
-            println!("Start handling request from {:?}", remote_addr);
+            println!("Start handling request from {remote_addr:?}");
             // Try to read the next request; break if client closed connection or error occurred
             let Some(req) = request::from_line_stream(&mut line_stream).ok() else {
                 break;
@@ -62,7 +62,7 @@ impl HttpServer {
             }
         }
 
-        println!("Finish handling connection from {:?}", remote_addr);
+        println!("Finish handling connection from {remote_addr:?}");
         Ok(())
     }
 }
