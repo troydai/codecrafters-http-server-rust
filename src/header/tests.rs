@@ -361,7 +361,10 @@ fn test_accept_encoding_returns_value_when_present() {
     let mut headers = Headers::new();
     headers.add("Accept-Encoding", "gzip");
 
-    assert_eq!(headers.accept_encodings().unwrap(), vec!["gzip".to_string()]);
+    assert_eq!(
+        headers.accept_encodings().unwrap(),
+        vec!["gzip".to_string()]
+    );
 }
 
 #[test]
@@ -376,7 +379,10 @@ fn test_accept_encoding_case_insensitive() {
     let mut headers = Headers::new();
     headers.add("ACCEPT-ENCODING", "gzip");
 
-    assert_eq!(headers.accept_encodings().unwrap(), vec!["gzip".to_string()]);
+    assert_eq!(
+        headers.accept_encodings().unwrap(),
+        vec!["gzip".to_string()]
+    );
 }
 
 #[test]
@@ -384,7 +390,10 @@ fn test_accept_encoding_from_read() {
     let mut headers = Headers::new();
     headers.read(b"Accept-Encoding: deflate").unwrap();
 
-    assert_eq!(headers.accept_encodings().unwrap(), vec!["deflate".to_string()]);
+    assert_eq!(
+        headers.accept_encodings().unwrap(),
+        vec!["deflate".to_string()]
+    );
 }
 
 #[test]
@@ -394,11 +403,7 @@ fn test_accept_encoding_with_multiple_values() {
 
     assert_eq!(
         headers.accept_encodings().unwrap(),
-        vec![
-            "gzip".to_string(),
-            "deflate".to_string(),
-            "br".to_string()
-        ]
+        vec!["gzip".to_string(), "deflate".to_string(), "br".to_string()]
     );
 }
 

@@ -2,10 +2,18 @@
  * This module defines a HttpServer that handles connection.
  */
 
+#[cfg(test)]
+mod tests;
+
+use crate::body::HttpBody;
 use crate::connection::LineStream;
 use crate::request;
+use crate::response::Response;
 use crate::router::Router;
 use anyhow::Result;
+use flate2::Compression;
+use flate2::write::GzEncoder;
+use std::io::Write;
 use std::net::TcpStream;
 use std::sync::Arc;
 use threadpool::ThreadPool;
@@ -61,7 +69,7 @@ impl HttpServer {
                 .accept_encodings()
                 .is_some_and(|values| values.iter().any(|v| v == "gzip"))
             {
-                resp.set_encoding("gzip");
+                compress_response_body(&mut resp)?;
             }
 
             // set the connection management headers
@@ -80,4 +88,15 @@ impl HttpServer {
         println!("Finish handling connection from {remote_addr:?}");
         Ok(())
     }
+}
+
+fn compress_response_body(resp: &mut Response) -> Result<()> {
+    if let HttpBody::Content(bytes) = resp.body() {
+        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(bytes)?;
+        let compressed_bytes = encoder.finish()?;
+        resp.set_encoding("gzip");
+        resp.set_body(HttpBody::Content(compressed_bytes));
+    }
+    Ok(())
 }

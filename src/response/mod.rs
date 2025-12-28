@@ -48,6 +48,24 @@ impl Response {
         self.headers.set(HEADER_CONTENT_ENCODING, encoding);
     }
 
+    #[allow(dead_code)]
+    pub const fn headers(&self) -> &Headers {
+        &self.headers
+    }
+
+    pub const fn body(&self) -> &HttpBody {
+        &self.body
+    }
+
+    pub fn set_body(&mut self, body: HttpBody) {
+        if let HttpBody::Content(ref bytes) = body {
+            self.headers.set_content_length(bytes.len());
+        } else {
+            self.headers.set_content_length(0);
+        }
+        self.body = body;
+    }
+
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
 
