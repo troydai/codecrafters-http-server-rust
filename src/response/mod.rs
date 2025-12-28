@@ -17,11 +17,9 @@ pub struct Response {
 
 impl Response {
     pub fn new(status: HttpStatus) -> Self {
-        let mut headers = Headers::new();
-        headers.set_content_length(0);
         Self {
             status,
-            headers,
+            headers: Headers::new(),
             body: HttpBody::Empty,
         }
     }
@@ -46,7 +44,15 @@ impl Response {
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
-        self.headers.write(stream)?;
+
+        // Set Content-Length: 0 for empty body responses
+        if matches!(self.body, HttpBody::Empty) {
+            let mut headers = self.headers.clone();
+            headers.set_content_length(0);
+            headers.write(stream)?;
+        } else {
+            self.headers.write(stream)?;
+        }
 
         // empty line to separate body from headers
         stream.write_all(CRLF)?;

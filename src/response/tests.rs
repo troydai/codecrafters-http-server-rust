@@ -241,21 +241,15 @@ fn test_response_with_body_uses_headers_for_content_length() {
 
 // Tests for Response owning Headers and auto-updating Content-Length
 #[test]
-fn test_new_response_has_content_length_zero_in_headers() {
-    // Response::new() should initialize headers with Content-Length: 0
-    // The headers should be stored in the struct, not created during write()
+fn test_new_response_has_empty_headers() {
+    // Response::new() creates empty headers
+    // Content-Length: 0 is added during write() for empty body responses
     let resp = Response::new(HttpStatus::Ok);
 
-    // Verify the Content-Length header is actually stored (not just returning default 0)
-    // by checking that get() returns Some, not None
+    // Headers are empty - no Content-Length stored yet
     assert!(
-        resp.headers().get("Content-Length").is_some(),
-        "Content-Length header should be explicitly stored in new Response"
-    );
-    assert_eq!(
-        resp.headers().content_length().unwrap(),
-        0,
-        "New response should have Content-Length: 0 in headers"
+        resp.headers().get("Content-Length").is_none(),
+        "New Response should have empty headers"
     );
 }
 
