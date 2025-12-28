@@ -308,15 +308,13 @@ fn test_set_overwrites_existing_single_value() {
 }
 
 #[test]
-fn test_set_does_not_normalize_case() {
-    // Note: set() does not convert names to lowercase unlike add()
-    // This test documents the current behavior
+fn test_set_normalizes_case() {
+    // Note: set() now converts names to lowercase
     let mut headers = Headers::new();
     headers.set("Content-Type", "application/json");
 
-    // get() normalizes to lowercase, but set() stored with original case
-    // so lookup fails
-    assert!(headers.get("content-type").is_none());
+    // get() normalizes to lowercase, and set() should have stored it lowercase
+    assert!(headers.get("content-type").is_some());
 }
 
 #[test]

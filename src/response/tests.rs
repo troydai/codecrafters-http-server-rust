@@ -44,7 +44,7 @@ fn test_set_body_sets_content_type() {
     resp.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert!(output.contains("Content-Type: text/plain\r\n"));
+    assert!(output.contains("content-type: text/plain\r\n"));
 }
 
 #[test]

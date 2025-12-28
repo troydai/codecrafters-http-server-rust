@@ -47,7 +47,7 @@ impl Headers {
     pub fn set(&mut self, name: &str, value: &str) {
         let _ = self
             .headers
-            .entry(String::from(name))
+            .entry(name.to_lowercase())
             .and_modify(|coll| {
                 coll.clear();
                 coll.push(String::from(value));
@@ -121,10 +121,7 @@ impl Headers {
     /// Sets the Content-Length header to the given value.
     /// This uses `add()` internally to ensure case-insensitive lookup works correctly.
     pub fn set_content_length(&mut self, length: usize) {
-        // First clear any existing Content-Length header by using the internal HashMap directly
-        // We need to remove the lowercase key since add() stores keys in lowercase
-        self.headers.remove("content-length");
-        self.add(consts::HEADER_CONTENT_LENGTH, &length.to_string());
+        self.set(consts::HEADER_CONTENT_LENGTH, &length.to_string());
     }
 }
 
