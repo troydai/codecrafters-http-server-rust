@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use crate::body::HttpBody;
 use crate::consts::CRLF;
 use crate::header::Headers;
 use crate::http::status::HttpStatus;
@@ -11,7 +12,7 @@ use std::io::Write;
 pub struct Response {
     status: HttpStatus,
     headers: Headers,
-    body: Option<Vec<u8>>,
+    body: HttpBody,
 }
 
 impl Response {
@@ -19,36 +20,43 @@ impl Response {
         Self {
             status,
             headers: Headers::new(),
-            body: None,
+            body: HttpBody::Empty,
         }
     }
 
     pub fn set_str_body(&mut self, body: &str) {
         let bytes = body.as_bytes();
         self.headers.set("Content-Type", "text/plain");
-        self.headers.set("Content-Length", &bytes.len().to_string());
-        self.body = Some(Vec::from(body.as_bytes()));
+        self.headers.set_content_length(bytes.len());
+        self.body = HttpBody::Content(Vec::from(bytes));
     }
 
     pub fn set_bytes_body(&mut self, content_type: &str, body: &[u8]) {
         self.headers.set("Content-Type", content_type);
-        self.headers.set("Content-Length", &body.len().to_string());
-        self.body = Some(Vec::from(body));
+        self.headers.set_content_length(body.len());
+        self.body = HttpBody::Content(Vec::from(body));
+    }
+
+    #[allow(dead_code)]
+    pub const fn headers(&self) -> &Headers {
+        &self.headers
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
-        self.headers.write(stream)?;
 
-        // For HTTP/1.1 persistent connections, responses without a body must
-        // include Content-Length: 0 so clients know the response is complete
-        if self.body.is_none() {
-            stream.write_all(b"Content-Length: 0\r\n")?;
+        // Set Content-Length: 0 for empty body responses
+        if matches!(self.body, HttpBody::Empty) {
+            let mut headers = self.headers.clone();
+            headers.set_content_length(0);
+            headers.write(stream)?;
+        } else {
+            self.headers.write(stream)?;
         }
 
         // empty line to separate body from headers
         stream.write_all(CRLF)?;
-        if let Some(body) = &self.body {
+        if let HttpBody::Content(body) = &self.body {
             stream.write_all(body.as_slice())?;
         }
 

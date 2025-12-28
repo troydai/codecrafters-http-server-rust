@@ -3,6 +3,8 @@ use super::Headers;
 #[test]
 fn test_new_creates_empty_headers() {
     let headers = Headers::new();
+    // Headers::new() creates empty headers with no defaults
+    assert!(headers.get("content-length").is_none());
     assert!(headers.get("any-header").is_none());
 }
 
@@ -146,20 +148,19 @@ fn test_write_multiple_values_same_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert_eq!(
-        output,
-        "accept: text/html, application/json, application/xml\r\n"
-    );
+    assert_eq!(output, "accept: text/html, application/json, application/xml\r\n");
 }
 
 #[test]
-fn test_write_empty_headers() {
+fn test_write_new_headers_is_empty() {
     let headers = Headers::new();
 
     let mut buffer = Vec::new();
     headers.write(&mut buffer).unwrap();
 
-    assert!(buffer.is_empty());
+    // Headers::new() creates empty headers
+    let output = String::from_utf8(buffer).unwrap();
+    assert_eq!(output, "");
 }
 
 // Additional edge case tests for read() method
@@ -307,15 +308,13 @@ fn test_set_overwrites_existing_single_value() {
 }
 
 #[test]
-fn test_set_does_not_normalize_case() {
-    // Note: set() does not convert names to lowercase unlike add()
-    // This test documents the current behavior
+fn test_set_normalizes_case() {
+    // Note: set() now converts names to lowercase
     let mut headers = Headers::new();
     headers.set("Content-Type", "application/json");
 
-    // get() normalizes to lowercase, but set() stored with original case
-    // so lookup fails
-    assert!(headers.get("content-type").is_none());
+    // get() normalizes to lowercase, and set() should have stored it lowercase
+    assert!(headers.get("content-type").is_some());
 }
 
 #[test]
@@ -357,13 +356,15 @@ fn test_set_multiple_different_headers() {
 #[test]
 fn test_content_length_returns_value_when_present() {
     let mut headers = Headers::new();
-    headers.add("Content-Length", "42");
+    // Use set_content_length() to properly set the value (replacing the default 0)
+    headers.set_content_length(42);
 
     assert_eq!(headers.content_length().unwrap(), 42);
 }
 
 #[test]
 fn test_content_length_returns_zero_when_absent() {
+    // Headers::new() creates empty headers, content_length() returns 0 when absent
     let headers = Headers::new();
 
     assert_eq!(headers.content_length().unwrap(), 0);
@@ -372,24 +373,27 @@ fn test_content_length_returns_zero_when_absent() {
 #[test]
 fn test_content_length_returns_error_for_invalid_number() {
     let mut headers = Headers::new();
-    headers.add("Content-Length", "not-a-number");
+    headers.read(b"Content-Length: not-a-number").unwrap();
 
+    // Invalid Content-Length value causes content_length() to return an error
     assert!(headers.content_length().is_err());
 }
 
 #[test]
 fn test_content_length_returns_error_for_negative_number() {
     let mut headers = Headers::new();
-    headers.add("Content-Length", "-10");
+    headers.read(b"Content-Length: -10").unwrap();
 
+    // Negative numbers can't be parsed as usize, so content_length() returns an error
     assert!(headers.content_length().is_err());
 }
 
 #[test]
 fn test_content_length_returns_error_for_float() {
     let mut headers = Headers::new();
-    headers.add("Content-Length", "3.14");
+    headers.read(b"Content-Length: 3.14").unwrap();
 
+    // Floats can't be parsed as usize, so content_length() returns an error
     assert!(headers.content_length().is_err());
 }
 
@@ -404,7 +408,8 @@ fn test_content_length_returns_zero_for_zero() {
 #[test]
 fn test_content_length_large_value() {
     let mut headers = Headers::new();
-    headers.add("Content-Length", "1073741824"); // 1 GB
+    // Use set_content_length() to properly set the value
+    headers.set_content_length(1_073_741_824); // 1 GB
 
     assert_eq!(headers.content_length().unwrap(), 1_073_741_824);
 }
@@ -412,7 +417,8 @@ fn test_content_length_large_value() {
 #[test]
 fn test_content_length_case_insensitive() {
     let mut headers = Headers::new();
-    headers.add("content-length", "100");
+    // Use set_content_length() to properly set the value
+    headers.set_content_length(100);
 
     assert_eq!(headers.content_length().unwrap(), 100);
 }
@@ -518,4 +524,59 @@ fn test_connection_with_whitespace() {
     headers.read(b"Connection:   keep-alive   ").unwrap();
 
     assert_eq!(headers.connection(), Some("keep-alive"));
+}
+
+// Tests for set_content_length() method
+#[test]
+fn test_set_content_length_sets_header() {
+    let mut headers = Headers::new();
+    headers.set_content_length(42);
+
+    assert_eq!(headers.get("content-length"), Some("42"));
+}
+
+#[test]
+fn test_set_content_length_zero() {
+    let mut headers = Headers::new();
+    headers.set_content_length(0);
+
+    assert_eq!(headers.get("content-length"), Some("0"));
+}
+
+#[test]
+fn test_set_content_length_overwrites_existing() {
+    let mut headers = Headers::new();
+    headers.set_content_length(100);
+    headers.set_content_length(200);
+
+    assert_eq!(headers.get("content-length"), Some("200"));
+}
+
+#[test]
+fn test_set_content_length_large_value() {
+    let mut headers = Headers::new();
+    headers.set_content_length(1_073_741_824); // 1 GB
+
+    assert_eq!(headers.get("content-length"), Some("1073741824"));
+}
+
+#[test]
+fn test_set_content_length_then_content_length() {
+    let mut headers = Headers::new();
+    headers.set_content_length(256);
+
+    // content_length() should return the value we just set
+    assert_eq!(headers.content_length().unwrap(), 256);
+}
+
+#[test]
+fn test_set_content_length_write_format() {
+    let mut headers = Headers::new();
+    headers.set_content_length(42);
+
+    let mut buffer = Vec::new();
+    headers.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert_eq!(output, "content-length: 42\r\n");
 }

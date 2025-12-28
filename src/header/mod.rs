@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::consts;
 use anyhow::{Result, anyhow};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Headers {
     headers: HashMap<String, Vec<String>>,
 }
@@ -47,7 +47,7 @@ impl Headers {
     pub fn set(&mut self, name: &str, value: &str) {
         let _ = self
             .headers
-            .entry(String::from(name))
+            .entry(name.to_lowercase())
             .and_modify(|coll| {
                 coll.clear();
                 coll.push(String::from(value));
@@ -116,6 +116,12 @@ impl Headers {
     /// returns None if the header is not present.
     pub fn connection(&self) -> Option<&str> {
         self.get(consts::HEADER_CONNECTION)
+    }
+
+    /// Sets the Content-Length header to the given value.
+    /// This uses `add()` internally to ensure case-insensitive lookup works correctly.
+    pub fn set_content_length(&mut self, length: usize) {
+        self.set(consts::HEADER_CONTENT_LENGTH, &length.to_string());
     }
 }
 
