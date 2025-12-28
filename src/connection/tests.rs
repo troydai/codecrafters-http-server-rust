@@ -212,7 +212,7 @@ fn test_read_bytes_split_buffers() {
     // Scenario:
     // 1. We read a line, which leaves some data in `stream_buffer`.
     // 2. We then read bytes. Some should come from `stream_buffer`, some from `stream`.
-    
+
     // "Line\r\n" is 6 bytes.
     // "Body..." will follow.
     let line = b"Line\r\n";
@@ -225,7 +225,7 @@ fn test_read_bytes_split_buffers() {
     // we need to construct a MockReader that delivers chunks.
 
     let chunks = vec![
-        // Chunk 1: Line + BodyPart1. 
+        // Chunk 1: Line + BodyPart1.
         // read_line will consume Line. BodyPart1 stays in stream_buffer.
         {
             let mut c = Vec::new();
@@ -233,26 +233,26 @@ fn test_read_bytes_split_buffers() {
             c.extend_from_slice(body_part1);
             c
         },
-        // Chunk 2: BodyPart2. 
+        // Chunk 2: BodyPart2.
         // read_bytes should fetch this from stream after draining stream_buffer.
         body_part2.to_vec(),
     ];
-    
+
     let mut stream = MockReader::new(chunks);
     let mut line_stream = LineStream::new(&mut stream);
-    
+
     // 1. Read Line
     let read_line = line_stream.read_line().unwrap();
     assert_eq!(read_line, b"Line".to_vec());
-    
+
     // 2. Read Body (Part1 + Part2)
     let total_len = body_part1.len() + body_part2.len();
     let read_body = line_stream.read_bytes(total_len).unwrap();
-    
+
     let mut expected_body = Vec::new();
     expected_body.extend_from_slice(body_part1);
     expected_body.extend_from_slice(body_part2);
-    
+
     assert_eq!(read_body, expected_body);
 }
 
@@ -260,37 +260,37 @@ fn test_read_bytes_split_buffers() {
 fn test_consecutive_requests() {
     let req1 = b"GET /first HTTP/1.1\r\nContent-Length: 5\r\n\r\nHello";
     let req2 = b"GET /second HTTP/1.1\r\nContent-Length: 6\r\n\r\nWorld!";
-    
+
     let mut data = Vec::new();
     data.extend_from_slice(req1);
     data.extend_from_slice(req2);
-    
+
     let mut stream = Cursor::new(data);
     let mut line_stream = LineStream::new(&mut stream);
-    
+
     // Parse Request 1 manually using LineStream
     let line1 = line_stream.read_line().unwrap();
     assert_eq!(line1, b"GET /first HTTP/1.1");
-    
+
     let line2 = line_stream.read_line().unwrap();
     assert_eq!(line2, b"Content-Length: 5");
-    
+
     let line3 = line_stream.read_line().unwrap();
     assert_eq!(line3, b""); // Empty line after headers
-    
+
     let body1 = line_stream.read_bytes(5).unwrap();
     assert_eq!(body1, b"Hello");
-    
+
     // Parse Request 2
     let line1_2 = line_stream.read_line().unwrap();
     assert_eq!(line1_2, b"GET /second HTTP/1.1");
-    
+
     let line2_2 = line_stream.read_line().unwrap();
     assert_eq!(line2_2, b"Content-Length: 6");
-    
+
     let line3_2 = line_stream.read_line().unwrap();
     assert_eq!(line3_2, b"");
-    
+
     let body2 = line_stream.read_bytes(6).unwrap();
     assert_eq!(body2, b"World!");
 }

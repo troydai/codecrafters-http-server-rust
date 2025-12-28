@@ -148,7 +148,10 @@ fn test_write_multiple_values_same_header() {
     headers.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert_eq!(output, "accept: text/html, application/json, application/xml\r\n");
+    assert_eq!(
+        output,
+        "accept: text/html, application/json, application/xml\r\n"
+    );
 }
 
 #[test]

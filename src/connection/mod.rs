@@ -48,14 +48,14 @@ where
                 self.stream_buffer_start = 0;
                 let bytes_read = self.stream.read(&mut self.stream_buffer)?;
                 self.stream_buffer_size = bytes_read;
-                
+
                 if bytes_read == 0 {
-                     if self.line_buffer.is_empty() {
-                         return Err(anyhow::anyhow!("EOF"));
-                     }
-                     let retval = self.line_buffer.clone();
-                     self.line_buffer.clear();
-                     return Ok(retval);
+                    if self.line_buffer.is_empty() {
+                        return Err(anyhow::anyhow!("EOF"));
+                    }
+                    let retval = self.line_buffer.clone();
+                    self.line_buffer.clear();
+                    return Ok(retval);
                 }
             }
 
@@ -116,7 +116,9 @@ where
             let needed = count - retval.len();
             let to_take = std::cmp::min(needed, remaining_in_stream_buf);
 
-            retval.extend_from_slice(&self.stream_buffer[self.stream_buffer_start..self.stream_buffer_start + to_take]);
+            retval.extend_from_slice(
+                &self.stream_buffer[self.stream_buffer_start..self.stream_buffer_start + to_take],
+            );
             self.stream_buffer_start += to_take;
 
             if retval.len() == count {
