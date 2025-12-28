@@ -48,7 +48,7 @@ impl Response {
         self.headers.set(HEADER_CONTENT_ENCODING, encoding);
     }
 
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub const fn headers(&self) -> &Headers {
         &self.headers
     }
