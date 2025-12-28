@@ -19,9 +19,22 @@ pub struct Request {
     body: HttpBody,
 }
 
-pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
+/// Parses an HTTP request from a `LineStream`.
+///
+/// This function preserves the internal buffer state of the `LineStream`,
+/// making it suitable for parsing multiple pipelined requests from a single
+/// TCP connection (HTTP/1.1 keep-alive).
+///
+/// # Arguments
+///
+/// * `ls` - A mutable reference to a `LineStream` that wraps the underlying reader
+///
+/// # Returns
+///
+/// * `Ok(Request)` - Successfully parsed HTTP request
+/// * `Err(_)` - If the request is malformed or an I/O error occurs
+pub fn from_line_stream<T: Read>(ls: &mut LineStream<T>) -> Result<Request> {
     let mut req: Option<Request> = None;
-    let mut ls = LineStream::new(stream);
 
     loop {
         let current_line = ls.read_line()?;
@@ -52,6 +65,25 @@ pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
             Ok(req)
         },
     )
+}
+
+/// Parses an HTTP request from a reader.
+///
+/// This is a convenience wrapper around `from_line_stream` that creates
+/// a new `LineStream` for each call. For handling multiple pipelined requests
+/// on a single connection, use `from_line_stream` directly.
+///
+/// # Arguments
+///
+/// * `stream` - A mutable reference to any type implementing `Read`
+///
+/// # Returns
+///
+/// * `Ok(Request)` - Successfully parsed HTTP request
+/// * `Err(_)` - If the request is malformed or an I/O error occurs
+pub fn from_reader(stream: &mut impl Read) -> Result<Request> {
+    let mut ls = LineStream::new(stream);
+    from_line_stream(&mut ls)
 }
 
 impl Request {

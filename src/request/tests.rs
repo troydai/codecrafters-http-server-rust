@@ -1,7 +1,8 @@
 use std::io::Cursor;
 
-use super::from_reader;
+use super::{from_reader, from_line_stream};
 use crate::body::HttpBody;
+use crate::connection::LineStream;
 
 #[test]
 fn test_from_reader_simple_get() {
@@ -176,4 +177,122 @@ fn test_from_reader_split_crlf() {
 
     let request = from_reader(&mut reader).expect("should parse request");
     assert_eq!(request.path(), "/");
+}
+
+#[test]
+fn test_from_line_stream_pipelined_requests() {
+    // Two pipelined GET requests in a single buffer
+    let raw_requests = b"GET /first HTTP/1.1\r\nHost: example.com\r\n\r\nGET /second HTTP/1.1\r\nHost: example.com\r\n\r\n";
+    let mut reader = Cursor::new(raw_requests.as_slice());
+    let mut ls = LineStream::new(&mut reader);
+
+    // Parse first request
+    let req1 = from_line_stream(&mut ls).expect("should parse first request");
+    assert_eq!(req1.path(), "/first");
+
+    // Parse second request from the same LineStream
+    let req2 = from_line_stream(&mut ls).expect("should parse second request");
+    assert_eq!(req2.path(), "/second");
+}
+
+#[test]
+fn test_from_line_stream_pipelined_with_body() {
+    // Pipelined POST request with body followed by GET request
+    let body1 = b"Hello, World!";
+    let raw_requests = format!(
+        "POST /submit HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}GET /status HTTP/1.1\r\n\r\n",
+        body1.len(),
+        std::str::from_utf8(body1).unwrap()
+    );
+    let mut reader = Cursor::new(raw_requests.as_bytes());
+    let mut ls = LineStream::new(&mut reader);
+
+    // Parse first request (POST with body)
+    let req1 = from_line_stream(&mut ls).expect("should parse first request");
+    assert_eq!(req1.path(), "/submit");
+    match req1.body() {
+        HttpBody::Content(data) => assert_eq!(data, body1),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+
+    // Parse second request (GET)
+    let req2 = from_line_stream(&mut ls).expect("should parse second request");
+    assert_eq!(req2.path(), "/status");
+    assert!(matches!(req2.body(), HttpBody::Empty));
+}
+
+#[test]
+fn test_from_line_stream_multiple_pipelined_requests() {
+    // Three pipelined requests
+    let raw_requests = b"GET /one HTTP/1.1\r\n\r\nGET /two HTTP/1.1\r\n\r\nGET /three HTTP/1.1\r\n\r\n";
+    let mut reader = Cursor::new(raw_requests.as_slice());
+    let mut ls = LineStream::new(&mut reader);
+
+    let req1 = from_line_stream(&mut ls).expect("should parse first request");
+    assert_eq!(req1.path(), "/one");
+
+    let req2 = from_line_stream(&mut ls).expect("should parse second request");
+    assert_eq!(req2.path(), "/two");
+
+    let req3 = from_line_stream(&mut ls).expect("should parse third request");
+    assert_eq!(req3.path(), "/three");
+}
+
+#[test]
+fn test_from_line_stream_pipelined_with_large_body() {
+    // Pipelined requests where one has a large body (> 1024 bytes)
+    // Use ASCII printable characters to avoid UTF-8 issues
+    let body: Vec<u8> = (0_u8..255).cycle().take(1500).collect(); // ASCII printable range
+
+    // Build the request manually to ensure exact byte count
+    let mut raw_requests = Vec::new();
+    raw_requests.extend_from_slice(b"POST /upload HTTP/1.1\r\nContent-Length: ");
+    raw_requests.extend_from_slice(body.len().to_string().as_bytes());
+    raw_requests.extend_from_slice(b"\r\n\r\n");
+    raw_requests.extend_from_slice(&body);
+    raw_requests.extend_from_slice(b"GET /done HTTP/1.1\r\n\r\n");
+
+    let mut reader = Cursor::new(raw_requests);
+    let mut ls = LineStream::new(&mut reader);
+
+    // Parse first request with large body
+    let req1 = from_line_stream(&mut ls).expect("should parse first request");
+    assert_eq!(req1.path(), "/upload");
+    match req1.body() {
+        HttpBody::Content(data) => {
+            assert_eq!(data.len(), 1500);
+            assert_eq!(data, &body);
+        }
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+
+    // Parse second request
+    let req2 = from_line_stream(&mut ls).expect("should parse second request");
+    assert_eq!(req2.path(), "/done");
+}
+
+#[test]
+fn test_from_line_stream_pipelined_mixed_methods() {
+    // Mix of different HTTP methods pipelined together
+    let body = b"data";
+    let raw_requests = format!(
+        "GET /resource HTTP/1.1\r\n\r\nPOST /resource HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}DELETE /resource HTTP/1.1\r\n\r\n",
+        body.len(),
+        std::str::from_utf8(body).unwrap()
+    );
+    let mut reader = Cursor::new(raw_requests.as_bytes());
+    let mut ls = LineStream::new(&mut reader);
+
+    let req1 = from_line_stream(&mut ls).expect("should parse GET request");
+    assert_eq!(req1.path(), "/resource");
+
+    let req2 = from_line_stream(&mut ls).expect("should parse POST request");
+    assert_eq!(req2.path(), "/resource");
+    match req2.body() {
+        HttpBody::Content(data) => assert_eq!(data, body),
+        HttpBody::Empty => panic!("Expected Content, got Empty"),
+    }
+
+    let req3 = from_line_stream(&mut ls).expect("should parse DELETE request");
+    assert_eq!(req3.path(), "/resource");
 }
