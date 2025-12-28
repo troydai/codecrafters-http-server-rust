@@ -234,8 +234,7 @@ fn test_response_with_body_uses_headers_for_content_length() {
     // so we need to check the actual behavior
     assert!(
         output.contains("Content-Length: 5\r\n") || output.contains("content-length: 5\r\n"),
-        "Expected Content-Length header, got: {}",
-        output
+        "Expected Content-Length header, got: {output}"
     );
 }
 

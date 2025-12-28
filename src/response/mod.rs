@@ -37,7 +37,8 @@ impl Response {
         self.body = HttpBody::Content(Vec::from(body));
     }
 
-    pub fn headers(&self) -> &Headers {
+    #[allow(dead_code)]
+    pub const fn headers(&self) -> &Headers {
         &self.headers
     }
 
