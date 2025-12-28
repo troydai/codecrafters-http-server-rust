@@ -87,10 +87,10 @@ fn test_write_format_without_body() {
     let output = String::from_utf8(buffer).unwrap();
     // Responses without body must include Content-Length: 0 for HTTP/1.1 persistent connections
     // The header is written via Headers struct which normalizes names to lowercase
-    assert_eq!(
-        output,
-        "HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\n\r\n"
-    );
+    assert!(output.starts_with("HTTP/1.1 404 Not Found\r\n"));
+    assert!(output.contains("content-length: 0\r\n"));
+    assert!(output.contains("connection: keep-alive\r\n"));
+    assert!(output.ends_with("\r\n\r\n"));
 }
 
 // Tests for factory functions
@@ -299,4 +299,13 @@ fn test_set_body_multiple_times_updates_content_length() {
 
     resp.set_str_body("a much longer body");
     assert_eq!(resp.headers().content_length().unwrap(), 18);
+}
+
+#[test]
+fn test_keep_alive_header_present() {
+    let resp = Response::new(HttpStatus::Ok);
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+    let output = String::from_utf8(buffer).unwrap();
+    assert!(output.to_lowercase().contains("connection: keep-alive"));
 }

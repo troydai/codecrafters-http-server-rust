@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::body::HttpBody;
-use crate::consts::CRLF;
+use crate::consts::{CRLF, HEADER_CONNECTION};
 use crate::header::Headers;
 use crate::http::status::HttpStatus;
 use anyhow::Result;
@@ -17,9 +17,12 @@ pub struct Response {
 
 impl Response {
     pub fn new(status: HttpStatus) -> Self {
+        let mut headers = Headers::new();
+        headers.set(HEADER_CONNECTION, "keep-alive");
+
         Self {
             status,
-            headers: Headers::new(),
+            headers,
             body: HttpBody::Empty,
         }
     }
