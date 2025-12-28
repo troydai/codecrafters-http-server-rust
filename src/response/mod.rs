@@ -38,12 +38,17 @@ impl Response {
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
-        self.headers.write(stream)?;
 
         // For HTTP/1.1 persistent connections, responses without a body must
-        // include Content-Length: 0 so clients know the response is complete
+        // include Content-Length: 0 so clients know the response is complete.
+        // We clone headers to add Content-Length: 0 when body is absent,
+        // ensuring all headers go through the Headers struct consistently.
         if self.body.is_none() {
-            stream.write_all(b"Content-Length: 0\r\n")?;
+            let mut headers = self.headers.clone();
+            headers.set_content_length(0);
+            headers.write(stream)?;
+        } else {
+            self.headers.write(stream)?;
         }
 
         // empty line to separate body from headers

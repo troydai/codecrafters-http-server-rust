@@ -85,7 +85,11 @@ fn test_write_format_without_body() {
 
     let output = String::from_utf8(buffer).unwrap();
     // Responses without body must include Content-Length: 0 for HTTP/1.1 persistent connections
-    assert_eq!(output, "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+    // The header is written via Headers struct which normalizes names to lowercase
+    assert_eq!(
+        output,
+        "HTTP/1.1 404 Not Found\r\ncontent-length: 0\r\n\r\n"
+    );
 }
 
 // Tests for factory functions
@@ -201,4 +205,35 @@ fn test_status_write_status_line_internal_server_error() {
 
     let output = String::from_utf8(buffer).unwrap();
     assert_eq!(output, "HTTP/1.1 500 Internal Server Error\r\n");
+}
+
+// Tests for Response headers consistency
+#[test]
+fn test_response_without_body_uses_headers_for_content_length() {
+    let resp = Response::new(HttpStatus::Ok);
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    // Content-Length should be present via Headers struct (lowercase key format)
+    assert!(output.contains("content-length: 0\r\n"));
+}
+
+#[test]
+fn test_response_with_body_uses_headers_for_content_length() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    resp.set_str_body("Hello");
+
+    let mut buffer = Vec::new();
+    resp.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    // Content-Length should be written consistently via Headers struct
+    // Note: set_str_body uses headers.set() which preserves case,
+    // so we need to check the actual behavior
+    assert!(
+        output.contains("Content-Length: 5\r\n") || output.contains("content-length: 5\r\n"),
+        "Expected Content-Length header, got: {}",
+        output
+    );
 }

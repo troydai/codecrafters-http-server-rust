@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use crate::consts;
 use anyhow::{Result, anyhow};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Headers {
     headers: HashMap<String, Vec<String>>,
 }
@@ -118,8 +118,8 @@ impl Headers {
         self.get(consts::HEADER_CONNECTION)
     }
 
-    /// sets the Content-Length header to the given value.
-    /// this uses add() internally to ensure case-insensitive lookup works correctly.
+    /// Sets the Content-Length header to the given value.
+    /// This uses `add()` internally to ensure case-insensitive lookup works correctly.
     pub fn set_content_length(&mut self, length: usize) {
         // First clear any existing Content-Length header by using the internal HashMap directly
         // We need to remove the lowercase key since add() stores keys in lowercase
