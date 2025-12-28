@@ -53,7 +53,11 @@ impl HttpServer {
                 .is_some_and(|v| v.eq_ignore_ascii_case("close"));
 
             // Handle the request and write response
-            let resp = router.handle(&req)?;
+            let mut resp = router.handle(&req)?;
+            if should_close {
+                resp.set_header("Connection", "close");
+            }
+
             resp.write(&mut line_stream)?;
 
             // Close connection if requested
