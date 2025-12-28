@@ -519,3 +519,58 @@ fn test_connection_with_whitespace() {
 
     assert_eq!(headers.connection(), Some("keep-alive"));
 }
+
+// Tests for set_content_length() method
+#[test]
+fn test_set_content_length_sets_header() {
+    let mut headers = Headers::new();
+    headers.set_content_length(42);
+
+    assert_eq!(headers.get("content-length"), Some("42"));
+}
+
+#[test]
+fn test_set_content_length_zero() {
+    let mut headers = Headers::new();
+    headers.set_content_length(0);
+
+    assert_eq!(headers.get("content-length"), Some("0"));
+}
+
+#[test]
+fn test_set_content_length_overwrites_existing() {
+    let mut headers = Headers::new();
+    headers.set_content_length(100);
+    headers.set_content_length(200);
+
+    assert_eq!(headers.get("content-length"), Some("200"));
+}
+
+#[test]
+fn test_set_content_length_large_value() {
+    let mut headers = Headers::new();
+    headers.set_content_length(1_073_741_824); // 1 GB
+
+    assert_eq!(headers.get("content-length"), Some("1073741824"));
+}
+
+#[test]
+fn test_set_content_length_then_content_length() {
+    let mut headers = Headers::new();
+    headers.set_content_length(256);
+
+    // content_length() should return the value we just set
+    assert_eq!(headers.content_length().unwrap(), 256);
+}
+
+#[test]
+fn test_set_content_length_write_format() {
+    let mut headers = Headers::new();
+    headers.set_content_length(42);
+
+    let mut buffer = Vec::new();
+    headers.write(&mut buffer).unwrap();
+
+    let output = String::from_utf8(buffer).unwrap();
+    assert_eq!(output, "content-length: 42\r\n");
+}

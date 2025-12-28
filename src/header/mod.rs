@@ -117,6 +117,15 @@ impl Headers {
     pub fn connection(&self) -> Option<&str> {
         self.get(consts::HEADER_CONNECTION)
     }
+
+    /// sets the Content-Length header to the given value.
+    /// this uses add() internally to ensure case-insensitive lookup works correctly.
+    pub fn set_content_length(&mut self, length: usize) {
+        // First clear any existing Content-Length header by using the internal HashMap directly
+        // We need to remove the lowercase key since add() stores keys in lowercase
+        self.headers.remove("content-length");
+        self.add(consts::HEADER_CONTENT_LENGTH, &length.to_string());
+    }
 }
 
 fn wire_format(name: &String, values: &[String]) -> Vec<u8> {
