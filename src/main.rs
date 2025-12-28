@@ -32,8 +32,6 @@ fn main() -> Result<()> {
                 println!("error: {e}");
             }
         }
-
-        println!("finished processing the connection");
     }
 
     Ok(())
