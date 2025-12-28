@@ -16,9 +16,14 @@ pub struct Response {
 
 impl Response {
     pub fn new(status: HttpStatus) -> Self {
+        let mut headers = Headers::new();
+        // Initialize Content-Length: 0 so headers are always stored in the struct,
+        // not created on-the-fly during write().
+        headers.set_content_length(0);
+
         Self {
             status,
-            headers: Headers::new(),
+            headers,
             body: None,
         }
     }
@@ -26,30 +31,28 @@ impl Response {
     pub fn set_str_body(&mut self, body: &str) {
         let bytes = body.as_bytes();
         self.headers.set("Content-Type", "text/plain");
-        self.headers.set("Content-Length", &bytes.len().to_string());
-        self.body = Some(Vec::from(body.as_bytes()));
+        self.headers.set_content_length(bytes.len());
+        self.body = Some(Vec::from(bytes));
     }
 
     pub fn set_bytes_body(&mut self, content_type: &str, body: &[u8]) {
         self.headers.set("Content-Type", content_type);
-        self.headers.set("Content-Length", &body.len().to_string());
+        self.headers.set_content_length(body.len());
         self.body = Some(Vec::from(body));
+    }
+
+    /// Returns a reference to the response headers.
+    pub const fn headers(&self) -> &Headers {
+        &self.headers
     }
 
     pub fn write(&self, stream: &mut impl Write) -> Result<()> {
         self.status.write_status_line(stream)?;
 
-        // For HTTP/1.1 persistent connections, responses without a body must
-        // include Content-Length: 0 so clients know the response is complete.
-        // We clone headers to add Content-Length: 0 when body is absent,
-        // ensuring all headers go through the Headers struct consistently.
-        if self.body.is_none() {
-            let mut headers = self.headers.clone();
-            headers.set_content_length(0);
-            headers.write(stream)?;
-        } else {
-            self.headers.write(stream)?;
-        }
+        // Headers are stored in the struct with Content-Length already set:
+        // - Response::new() initializes Content-Length: 0
+        // - set_str_body/set_bytes_body update Content-Length to body length
+        self.headers.write(stream)?;
 
         // empty line to separate body from headers
         stream.write_all(CRLF)?;

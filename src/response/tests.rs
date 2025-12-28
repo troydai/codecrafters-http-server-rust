@@ -56,7 +56,8 @@ fn test_set_body_sets_content_length() {
     resp.write(&mut buffer).unwrap();
 
     let output = String::from_utf8(buffer).unwrap();
-    assert!(output.contains("Content-Length: 5\r\n"));
+    // Content-Length is written via Headers which uses lowercase keys
+    assert!(output.contains("content-length: 5\r\n"));
 }
 
 // Tests for Response::write()
@@ -236,4 +237,73 @@ fn test_response_with_body_uses_headers_for_content_length() {
         "Expected Content-Length header, got: {}",
         output
     );
+}
+
+// Tests for Response owning Headers and auto-updating Content-Length
+#[test]
+fn test_new_response_has_content_length_zero_in_headers() {
+    // Response::new() should initialize headers with Content-Length: 0
+    // The headers should be stored in the struct, not created during write()
+    let resp = Response::new(HttpStatus::Ok);
+
+    // Verify the Content-Length header is actually stored (not just returning default 0)
+    // by checking that get() returns Some, not None
+    assert!(
+        resp.headers().get("Content-Length").is_some(),
+        "Content-Length header should be explicitly stored in new Response"
+    );
+    assert_eq!(
+        resp.headers().content_length().unwrap(),
+        0,
+        "New response should have Content-Length: 0 in headers"
+    );
+}
+
+#[test]
+fn test_set_str_body_updates_content_length_in_headers() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    resp.set_str_body("Hello");
+
+    // Verify via headers() that Content-Length was updated
+    assert_eq!(
+        resp.headers().content_length().unwrap(),
+        5,
+        "Content-Length should be updated to body length"
+    );
+}
+
+#[test]
+fn test_set_bytes_body_updates_content_length_in_headers() {
+    let mut resp = Response::new(HttpStatus::Ok);
+    let body = b"binary data here";
+    resp.set_bytes_body("application/octet-stream", body);
+
+    // Verify via headers() that Content-Length was updated
+    assert_eq!(
+        resp.headers().content_length().unwrap(),
+        body.len(),
+        "Content-Length should be updated to body length"
+    );
+}
+
+#[test]
+fn test_response_headers_are_owned_not_created_during_write() {
+    // This test verifies that headers are stored in the struct,
+    // not created on-the-fly during write()
+    let resp = Response::new(HttpStatus::Ok);
+    let headers = resp.headers();
+
+    // Should be able to access headers before calling write()
+    assert_eq!(headers.content_length().unwrap(), 0);
+}
+
+#[test]
+fn test_set_body_multiple_times_updates_content_length() {
+    let mut resp = Response::new(HttpStatus::Ok);
+
+    resp.set_str_body("short");
+    assert_eq!(resp.headers().content_length().unwrap(), 5);
+
+    resp.set_str_body("a much longer body");
+    assert_eq!(resp.headers().content_length().unwrap(), 18);
 }
